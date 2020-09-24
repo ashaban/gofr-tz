@@ -82,29 +82,21 @@ export const generalMixin = {
       })
     },
     clearProgress (type) {
-      axios.get(
-        backendServer +
-        '/clearProgress/' +
-        type +
-        '/' +
-        this.$store.state.clientId
-      )
+      axios.get(backendServer + '/clearProgress/' + type + '/' + this.$store.state.clientId)
     },
     getGeneralConfig (callback) {
-      let defaultGenerConfig = JSON.stringify(
-        this.$store.state.config.generalConfig
-      )
-      axios
-        .get(backendServer + '/getGeneralConfig?defaultGenerConfig=' + defaultGenerConfig)
-        .then(config => {
-          if (config) {
-            this.$store.state.config.generalConfig = config.data
-          }
-          return callback()
-        })
-        .catch(() => {
-          return callback()
-        })
+      axios({
+        url: '/getGeneralConfig',
+        method: 'post',
+        data: this.$store.state.config.generalConfig
+      }).then(config => {
+        if (config) {
+          this.$store.state.config.generalConfig = config.data
+        }
+        return callback()
+      }).catch(() => {
+        return callback()
+      })
     },
     toTitleCase (str) {
       return str

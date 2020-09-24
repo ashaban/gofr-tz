@@ -40,6 +40,10 @@
         "msg": "Rapports",
         "tooltip": "Voir les rapports"
       },
+      "HFR": {
+        "msg": "Sync With HFR",
+        "tooltip": "Sync With HFR"
+      },
       "historyReport": {
         "msg": "Histoire",
         "tooltip": "Suivre l'historique des installations et des services"
@@ -56,9 +60,17 @@
         "msg": "Add Facility From HFR",
         "tooltip": "Add Facility From HFR"
       },
+      "updateFacilityHFR": {
+        "msg": "Update Facility From HFR",
+        "tooltip": "Update Facility From HFR"
+      },
       "addJurisdictionHFR": {
         "msg": "Add Administrative Area From HFR",
         "tooltip": "Add Administrative Area From HFR"
+      },
+      "updateJurisdictionHFR": {
+        "msg": "Update Administrative Area From HFR",
+        "tooltip": "Update Administrative Area From HFR"
       },
       "facilitiesReport": {
         "msg": "Facilities Report",

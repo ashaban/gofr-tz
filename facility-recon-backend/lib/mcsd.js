@@ -887,6 +887,7 @@ module.exports = () => ({
     name,
     code,
     id,
+    level,
     parent,
   }, callback) {
     const resource = {};
@@ -916,6 +917,14 @@ module.exports = () => ({
         value: code,
       }];
     }
+    if (level) {
+      resource.type = [{
+        coding: [{
+          system: '2.25.123494412831734081331965080571820180508',
+          code: parseInt(level) + 1,
+        }],
+      }];
+    }
     resource.physicalType = {
       coding: [{
         system: 'http://hl7.org/fhir/location-physical-type',
@@ -935,6 +944,91 @@ module.exports = () => ({
         url: `Location/${resource.id}`,
       },
     });
+    // if level is 3 the;n also add DVS
+    if (parseInt(level) === 3) {
+      const orgDVS = {
+        resourceType: 'Organization',
+        id: uuid4(),
+        meta: {
+          profile: [
+            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_Organization',
+            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_FacilityOrganization',
+          ],
+        },
+        type: [{
+          coding: [{
+            system: 'urn:ietf:rfc:3986',
+            code: 'urn:ihe:iti:mcsd:2019:facility',
+            display: 'Facility',
+            userSelected: false,
+          }],
+        }],
+        name: `${name} DVS`,
+      };
+      const dvsID = uuid4();
+      const dvs = {
+        meta: {
+          profile: [
+            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_Location',
+            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_FacilityLocation',
+          ],
+        },
+        resourceType: 'Location',
+        id: dvsID,
+        status: 'active',
+        name: `${name} DVS`,
+        identifier: [{
+          type: {
+            text: 'entityID',
+          },
+          system: 'urn:ihe:iti:csd:2013:entityID',
+          value: dvsID,
+        }],
+        type: [{
+          coding: [{
+            system: 'urn:ietf:rfc:3986',
+            code: 'urn:ihe:iti:mcsd:2019:facility',
+            display: 'Facility',
+            userSelected: false,
+          }],
+        },
+        {
+          coding: [{
+            system: 'http://hfrportal.ehealth.go.tz/facilityType',
+            code: 'DVS',
+          }],
+          text: 'Facility Type',
+        },
+        ],
+        physicalType: {
+          coding: [{
+            system: 'http://hl7.org/fhir/location-physical-type',
+            code: 'bu',
+            display: 'Building',
+          }],
+          text: 'Building',
+        },
+        managingOrganization: {
+          reference: `Organization/${orgDVS.id}`,
+        },
+        partOf: {
+          reference: `Location/${resource.id}`,
+        },
+      };
+      fhir.entry.push({
+        resource: dvs,
+        request: {
+          method: 'PUT',
+          url: `Location/${dvs.id}`,
+        },
+      }, {
+        resource: orgDVS,
+        request: {
+          method: 'PUT',
+          url: `Organization/${orgDVS.id}`,
+        },
+      });
+    }
     this.saveLocations(fhir, database, (err, res) => {
       if (err) {
         winston.error(err);
@@ -2859,6 +2953,19 @@ module.exports = () => ({
       const {
         id,
       } = entry.resource;
+      let level;
+      if (entry.resource.type && Array.isArray(entry.resource.type)) {
+        for (const type of entry.resource.type) {
+          if (!type.coding) {
+            continue;
+          }
+          for (const coding of type.coding) {
+            if (coding.system === '2.25.123494412831734081331965080571820180508') {
+              level = coding.code;
+            }
+          }
+        }
+      }
       const item = {
         text: entry.resource.name,
         id,
@@ -2867,6 +2974,9 @@ module.exports = () => ({
         },
         children: [],
       };
+      if (level) {
+        item.data.level = level;
+      }
       if (!recursive) {
         item.isBatch = true;
       }
@@ -2886,7 +2996,7 @@ module.exports = () => ({
       callback1();
     }, () => {
       if (Object.keys(addLater).length > 0) {
-        for (id in addLater) {
+        for (const id in addLater) {
           if (lookup[id]) {
             lookup[id].children.push(...addLater[id]);
           } else {
@@ -2897,7 +3007,7 @@ module.exports = () => ({
       const sortKids = (a, b) => a.text.localeCompare(b.text);
       const runSort = (arr) => {
         arr.sort(sortKids);
-        for (item of arr) {
+        for (const item of arr) {
           if (item.children.length > 0) {
             runSort(item.children);
           }

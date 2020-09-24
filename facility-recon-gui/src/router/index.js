@@ -19,8 +19,10 @@ import DataSourcesPair from '@/components/DataSourcesPair/FacilityReconDataSourc
 import DHIS2Auth from '@/components/disabledAuth/DHIS2Auth'
 import AddJurisdiction from '@/components/FacilityRegistry/AddJurisdiction'
 import AddJurisdictionHFR from '@/components/FacilityRegistry/AddJurisdictionHFR'
+import UpdateJurisdictionHFR from '@/components/FacilityRegistry/UpdateJurisdictionHFR'
 import AddFacility from '@/components/FacilityRegistry/AddFacility'
 import AddFacilityHFR from '@/components/FacilityRegistry/AddFacilityHFR'
+import UpdateFacilityHFR from '@/components/FacilityRegistry/UpdateFacilityHFR'
 import RequestBuildingAddition from '@/components/FacilityRegistry/RequestBuildingAddition'
 import FacilitiesReport from '@/components/FacilityRegistry/FacilitiesReport'
 import RequestUpdateBuildingDetails from '@/components/FacilityRegistry/RequestUpdateBuildingDetails'
@@ -244,9 +246,45 @@ let router = new Router({
       }
     },
     {
+      path: '/UpdateFacilityHFR',
+      name: 'UpdateFacilityHFR',
+      component: UpdateFacilityHFR,
+      beforeEnter: (to, from, next) => {
+        let hasTask = tasksVerification.canAdd(to.name)
+        if (hasTask) {
+          return next()
+        }
+        store.state.dialogError = true
+        store.state.errorTitle = 'Info'
+        store.state.errorColor = 'error'
+        store.state.errorDescription = `You dont have permission to access this page`
+        next({
+          path: from.path
+        })
+      }
+    },
+    {
       path: '/AddJurisdictionHFR',
       name: 'AddJurisdictionHFR',
       component: AddJurisdictionHFR,
+      beforeEnter: (to, from, next) => {
+        let hasTask = tasksVerification.canAdd(to.name)
+        if (hasTask) {
+          return next()
+        }
+        store.state.dialogError = true
+        store.state.errorTitle = 'Info'
+        store.state.errorColor = 'error'
+        store.state.errorDescription = `You dont have permission to access this page`
+        next({
+          path: from.path
+        })
+      }
+    },
+    {
+      path: '/UpdateJurisdictionHFR',
+      name: 'UpdateJurisdictionHFR',
+      component: UpdateJurisdictionHFR,
       beforeEnter: (to, from, next) => {
         let hasTask = tasksVerification.canAdd(to.name)
         if (hasTask) {

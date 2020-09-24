@@ -276,7 +276,7 @@ if (cluster.isMaster) {
     }
   });
 
-  const numWorkers = require('os').cpus().length;
+  const numWorkers = 1//require('os').cpus().length;
   console.log(`Master cluster setting up ${numWorkers} workers...`);
 
   for (let i = 0; i < numWorkers; i++) {
@@ -993,8 +993,8 @@ if (cluster.isMaster) {
     });
   });
 
-  app.get('/getGeneralConfig', (req, res) => {
-    const defaultGenerConfig = JSON.parse(req.query.defaultGenerConfig);
+  app.post('/getGeneralConfig', (req, res) => {
+    const defaultGenerConfig = req.body;
     winston.info('Received a request to get general configuration');
     mongo.getGeneralConfig((err, resData) => {
       if (err) {

@@ -104,7 +104,7 @@
                       <v-spacer />
                       <v-btn
                         @click="addLocation()"
-                        :disabled="$v.$invalid"
+                        :disabled="$v.$invalid || (!this.activeJurisdiction || !this.activeJurisdiction.data)"
                         class="white--text"
                         color="deep-purple accent-4"
                         depressed
@@ -169,6 +169,12 @@ export default {
       formData.append('code', this.code)
       if (this.activeJurisdiction.id) {
         formData.append('parent', this.activeJurisdiction.id)
+      }
+      console.log(this.activeJurisdiction)
+      if (this.activeJurisdiction && this.activeJurisdiction.data && this.activeJurisdiction.data.level) {
+        formData.append('level', this.activeJurisdiction.data.level)
+      } else {
+        formData.append('level', 0)
       }
       axios.post(backendServer + '/FR/addJurisdiction', formData, {
         headers: {

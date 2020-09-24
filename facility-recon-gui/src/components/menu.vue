@@ -166,25 +166,7 @@
             <span>{{ $t('App.menu.addJurisdiction.tooltip')}}</span>
           </v-tooltip>
         </v-list>
-        <v-list
-          class="lastMenu"
-          v-if="tasksVerification.canAdd('AddFacility')"
-        >
-          <v-tooltip right>
-            <v-list-tile
-              to="AddJurisdictionHFR"
-              slot="activator"
-            >
-              <v-list-tile-title class="menuText">
-                <v-icon
-                  left
-                  color="black"
-                >home_work</v-icon>{{ $t('App.menu.addJurisdictionHFR.msg')}}
-              </v-list-tile-title>
-            </v-list-tile>
-            <span>{{ $t('App.menu.addJurisdictionHFR.tooltip')}}</span>
-          </v-tooltip>
-        </v-list>
+
         <v-list
           class="lastMenu"
           v-if="tasksVerification.canAdd('AddFacility')"
@@ -204,25 +186,98 @@
             <span>{{ $t('App.menu.addFacility.tooltip')}}</span>
           </v-tooltip>
         </v-list>
-        <v-list
-          class="lastMenu"
-          v-if="tasksVerification.canAdd('AddFacility')"
-        >
-          <v-tooltip right>
-            <v-list-tile
-              to="AddFacilityHFR"
-              slot="activator"
+        <li class="parent">
+          <a href="#">
+            <v-icon
+              left
+              color="black"
+            >list</v-icon>
+            {{ $t('App.menu.HFR.msg')}}
+            <v-icon
+              color="black"
+              small
+              class="menuArrow"
+            >play_arrow</v-icon>
+          </a>
+          <ul class="child">
+            <v-list
+              class="lastMenu"
+              v-if="tasksVerification.canAdd('AddFacility')"
             >
-              <v-list-tile-title class="menuText">
-                <v-icon
-                  left
-                  color="black"
-                >house</v-icon>{{ $t('App.menu.addFacilityHFR.msg')}}
-              </v-list-tile-title>
-            </v-list-tile>
-            <span>{{ $t('App.menu.addFacilityHFR.tooltip')}}</span>
-          </v-tooltip>
-        </v-list>
+              <v-tooltip right>
+                <v-list-tile
+                  to="AddJurisdictionHFR"
+                  slot="activator"
+                >
+                  <v-list-tile-title class="menuText">
+                    <v-icon
+                      left
+                      color="black"
+                    >home_work</v-icon>{{ $t('App.menu.addJurisdictionHFR.msg')}}
+                  </v-list-tile-title>
+                </v-list-tile>
+                <span>{{ $t('App.menu.addJurisdictionHFR.tooltip')}}</span>
+              </v-tooltip>
+            </v-list>
+            <v-list
+              class="lastMenu"
+              v-if="tasksVerification.canAdd('AddFacility')"
+            >
+              <v-tooltip right>
+                <v-list-tile
+                  to="UpdateJurisdictionHFR"
+                  slot="activator"
+                >
+                  <v-list-tile-title class="menuText">
+                    <v-icon
+                      left
+                      color="black"
+                    >home_work</v-icon>{{ $t('App.menu.updateJurisdictionHFR.msg')}}
+                  </v-list-tile-title>
+                </v-list-tile>
+                <span>{{ $t('App.menu.updateJurisdictionHFR.tooltip')}}</span>
+              </v-tooltip>
+            </v-list>
+            <v-list
+              class="lastMenu"
+              v-if="tasksVerification.canAdd('AddFacility')"
+            >
+              <v-tooltip right>
+                <v-list-tile
+                  to="AddFacilityHFR"
+                  slot="activator"
+                >
+                  <v-list-tile-title class="menuText">
+                    <v-icon
+                      left
+                      color="black"
+                    >house</v-icon>{{ $t('App.menu.addFacilityHFR.msg')}}
+                  </v-list-tile-title>
+                </v-list-tile>
+                <span>{{ $t('App.menu.addFacilityHFR.tooltip')}}</span>
+              </v-tooltip>
+            </v-list>
+            <v-list
+              class="lastMenu"
+              v-if="tasksVerification.canAdd('AddFacility')"
+            >
+              <v-tooltip right>
+                <v-list-tile
+                  to="updateFacilityHFR"
+                  slot="activator"
+                >
+                  <v-list-tile-title class="menuText">
+                    <v-icon
+                      left
+                      color="black"
+                    >house</v-icon>{{ $t('App.menu.updateFacilityHFR.msg')}}
+                  </v-list-tile-title>
+                </v-list-tile>
+                <span>{{ $t('App.menu.updateFacilityHFR.tooltip')}}</span>
+              </v-tooltip>
+            </v-list>
+          </ul>
+        </li>
         <!-- <v-list
           class="lastMenu"
           v-if="tasksVerification.canAdd('AddService')"

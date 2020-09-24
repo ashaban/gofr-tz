@@ -7,6 +7,45 @@ const isJSON = require('is-json');
 const config = require('./config');
 
 module.exports = () => ({
+  getMetaData(callback) {
+    let metadata = [];
+    let nexturl = new URI(config.getConf('hfr:baseURL')).segment('/api/collections/409/fields.json').addQuery('human', 'true');
+    const username = config.getConf('hfr:username');
+    const password = config.getConf('hfr:password');
+    const auth = `Basic ${new Buffer(`${username}:${password}`).toString('base64')}`;
+    async.doWhilst(
+      (callback) => {
+        const options = {
+          url: nexturl.toString(),
+          headers: {
+            Authorization: auth,
+          },
+        };
+        request.get(options, (err, res, body) => {
+          if (isJSON(body)) {
+            body = JSON.parse(body);
+            metadata = metadata.concat(body);
+            if (body.hasOwnProperty('nextPage')) {
+              nexturl = body.nextPage;
+            } else {
+              nexturl = false;
+            }
+          } else {
+            winston.error(body);
+            winston.error('Non JSON data returned by HFR while getting metadata');
+            return callback(err, false);
+          }
+          return callback(err, nexturl);
+        });
+      }, () => {
+        if (nexturl) {
+          winston.info(`Fetching In ${nexturl}`);
+        }
+        return (nexturl !== false);
+      }, () => callback(metadata),
+    );
+  },
+
   getFacilities(callback) {
     let facilities = [];
     let nexturl = new URI(config.getConf('hfr:baseURL')).segment('/api/collections/409.json').addQuery('human', 'true');
@@ -33,6 +72,7 @@ module.exports = () => ({
               }
             }
           } else {
+            winston.error(body);
             winston.error('Non JSON data returned by HFR while getting facilities');
             return callback(err, false);
           }
