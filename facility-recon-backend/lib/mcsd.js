@@ -372,6 +372,8 @@ module.exports = () => ({
           }
           if (body.entry && body.entry.length > 0) {
             locations.entry = locations.entry.concat(body.entry);
+          } else if(!body.entry && body.resourceType === 'Location') {
+            locations.entry.push(body);
           }
           return callback(false, url);
         });

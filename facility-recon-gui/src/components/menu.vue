@@ -550,6 +550,19 @@
                 </v-list-tile-title>
               </v-list-tile>
             </v-list>
+            <v-list
+              class="lastMenu"
+              v-if="tasksVerification.canView('JurisdictionsReport')"
+            >
+              <v-list-tile to="JurisdictionsReport">
+                <v-list-tile-title class="menuText">
+                  <v-icon
+                    left
+                    color="black"
+                  >list</v-icon>{{ $t('App.menu.jurisdictionsReport.msg')}}
+                </v-list-tile-title>
+              </v-list-tile>
+            </v-list>
             <!-- <v-list
               class="lastMenu"
               v-if="tasksVerification.canView('NewFacilitiesRequestsReport')"

@@ -76,6 +76,10 @@
         "msg": "Facilities Report",
         "tooltip": "Facilities Report"
       },
+      "jurisdictionsReport": {
+        "msg": "Administrative Areas",
+        "tooltip": "Administrative Areas"
+      },
       "servicesReport": {
         "msg": "Services Report",
         "tooltip": "Services Report"

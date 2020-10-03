@@ -136,7 +136,6 @@ const topOrgId = config.getConf('mCSD:fakeOrgId');
 const topOrgName = config.getConf('mCSD:fakeOrgName');
 
 if (cluster.isMaster) {
-  require('./cronjobs');
   require('./connection');
   const workers = {};
   const db = mongoose.connection;

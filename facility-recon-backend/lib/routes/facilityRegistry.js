@@ -120,7 +120,7 @@ router.get('/getLocationByID/:id', (req, res) => {
   const id = req.params.id;
   mcsd.getLocationByID('', id, false, (location) => {
     if (location && location.entry && location.entry.length > 0) {
-      parseBuildingResource(location.entry[0], config.getConf('hapi:defaultDBName'), (data) => {
+      parseLocationResource(location.entry[0], config.getConf('hapi:defaultDBName'), (data) => {
         return res.json(data)
       });
     } else {
@@ -217,7 +217,7 @@ router.get('/getFacilityMissingFromHFR', (req, res) => {
   mcsd.executeURL(url, (buildings) => {
     const buildingsTable = [];
     async.each(buildings.entry, (building, nxtBuilding) => {
-      parseBuildingResource(building, database, (row) => {
+      parseLocationResource(building, database, (row) => {
         buildingsTable.push(row);
         return nxtBuilding();
       });
@@ -240,7 +240,7 @@ router.get('/getFacilityUpdatedFromHFR', (req, res) => {
   mcsd.executeURL(url, (buildings) => {
     const buildingsTable = [];
     async.each(buildings.entry, (building, nxtBuilding) => {
-      parseBuildingResource(building, database, (row) => {
+      parseLocationResource(building, database, (row) => {
         buildingsTable.push(row);
         return nxtBuilding();
       });
@@ -409,7 +409,7 @@ router.get('/getBuildings', (req, res) => {
         let code;
         if (building.resource.identifier) {
           code = building.resource.identifier.find(
-            identifier => identifier.system === 'https://digitalhealth.intrahealth.org/code',
+            identifier => identifier.system === 'http://hfrportal.ehealth.go.tz' && identifier.type.text === 'Fac_IDNumber'
           );
         }
         if (code) {
@@ -529,6 +529,35 @@ router.get('/getBuildings', (req, res) => {
       });
     }
   });
+});
+
+router.get('/getJurisdictions', (req, res) => {
+  winston.info("Received a request to get jurisdictions list")
+  const { jurisdiction } = req.query;
+  const dbName = config.getConf('hapi:defaultDBName');
+  mcsd.getLocationChildren({
+    parent: jurisdiction
+  }, (jurisdictions) => {
+    const rows = []
+    async.each(jurisdictions.entry, (jur, nxtJur) => {
+      let isJurisdiction = false;
+      for(let coding of jur.resource.physicalType.coding) {
+        if(coding.code === 'jdn') {
+          isJurisdiction = true;
+        }
+      }
+      if(!isJurisdiction) {
+        return nxtJur();
+      }
+      parseLocationResource(jur, dbName, (row) => {
+        rows.push(row)
+        return nxtJur()
+      })
+    }, () => {
+      winston.info("Returning " + rows.length + " jursdictions")
+      return res.status(200).json(rows);
+    })
+  })
 });
 
 router.post('/updateFromHFR', (req, res) => {
@@ -1144,8 +1173,9 @@ router.get('/syncHFRAdminAreas', (req, res) => {
               {
                 system: '2.25.123494412831734081331965080571820180508',
                 code: level,
-              },
+              }
             ],
+            text: 'level'
           },
         ],
         physicalType: {
@@ -1164,7 +1194,7 @@ router.get('/syncHFRAdminAreas', (req, res) => {
   });
 });
 
-function parseBuildingResource(building, database, callback) {
+function parseLocationResource(building, database, callback) {
   if (!building.resource.name) {
     return {}
   }
@@ -1177,8 +1207,13 @@ function parseBuildingResource(building, database, callback) {
   let code;
   if (building.resource.identifier) {
     code = building.resource.identifier.find(
-      identifier => identifier.system === 'https://digitalhealth.intrahealth.org/code',
+      identifier => identifier.system === 'http://hfrportal.ehealth.go.tz' && identifier.type.text === 'Fac_IDNumber',
     );
+    if(!code) {
+      code = building.resource.identifier.find(
+        identifier => identifier.system === 'http://hfrportal.ehealth.go.tz' && identifier.type.text === 'code',
+      );
+    }
   }
   if (code) {
     row.code = code.value;
@@ -1264,10 +1299,16 @@ function parseBuildingResource(building, database, callback) {
         .addQuery('_id', building.resource.partOf.reference)
         .addQuery('_include:recurse', 'Location:partof')
         .toString();
+      row.immediateParent = {
+        id: building.resource.partOf.reference.split('/')[1],
+      }
       mcsd.executeURL(url, (parents) => {
         parents.entry.pop();
         parents.entry.reverse();
         for(const pr of parents.entry) {
+          if(pr.resource.id === row.immediateParent.id) {
+            row.immediateParent.name = pr.resource.name
+          }
           if(!row.parent) {
             row.parent = pr.resource.name;
           } else {

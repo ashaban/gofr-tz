@@ -25,6 +25,7 @@ import AddFacilityHFR from '@/components/FacilityRegistry/AddFacilityHFR'
 import UpdateFacilityHFR from '@/components/FacilityRegistry/UpdateFacilityHFR'
 import RequestBuildingAddition from '@/components/FacilityRegistry/RequestBuildingAddition'
 import FacilitiesReport from '@/components/FacilityRegistry/FacilitiesReport'
+import JurisdictionsReport from '@/components/FacilityRegistry/JurisdictionsReport'
 import RequestUpdateBuildingDetails from '@/components/FacilityRegistry/RequestUpdateBuildingDetails'
 import NewFacilitiesRequestsReport from '@/components/FacilityRegistry/NewFacilitiesRequestsReport'
 import FacilitiesUpdateRequestsReport from '@/components/FacilityRegistry/FacilitiesUpdateRequestsReport'
@@ -303,6 +304,24 @@ let router = new Router({
       path: '/FacilitiesReport',
       name: 'FacilitiesReport',
       component: FacilitiesReport,
+      beforeEnter: (to, from, next) => {
+        let hasTask = tasksVerification.canView(to.name)
+        if (hasTask) {
+          return next()
+        }
+        store.state.dialogError = true
+        store.state.errorTitle = 'Info'
+        store.state.errorColor = 'error'
+        store.state.errorDescription = `You dont have permission to access this page`
+        next({
+          path: from.path
+        })
+      }
+    },
+    {
+      path: '/JurisdictionsReport',
+      name: 'JurisdictionsReport',
+      component: JurisdictionsReport,
       beforeEnter: (to, from, next) => {
         let hasTask = tasksVerification.canView(to.name)
         if (hasTask) {
