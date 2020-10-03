@@ -5,6 +5,7 @@ const winston = require('winston');
 const csv = require('fast-csv');
 const async = require('async');
 const moment = require('moment');
+const uuid4 = require('uuid/v4');
 const config = require('./config');
 
 module.exports = function () {
@@ -23,6 +24,90 @@ module.exports = function () {
         return this.translateFacTypes(name, type.sub);
       }
       return type;
+    },
+    generateDVS(name, parent) {
+      const orgDVS = {
+        resourceType: 'Organization',
+        id: uuid4(),
+        meta: {
+          profile: [
+            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_Organization',
+            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_FacilityOrganization',
+          ],
+        },
+        type: [{
+          coding: [{
+            system: 'urn:ietf:rfc:3986',
+            code: 'urn:ihe:iti:mcsd:2019:facility',
+            display: 'Facility',
+            userSelected: false,
+          }],
+        }],
+        name: `${name} DVS`,
+      };
+      const dvsID = uuid4();
+      const dvs = {
+        meta: {
+          profile: [
+            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_Location',
+            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_FacilityLocation',
+          ],
+        },
+        resourceType: 'Location',
+        id: dvsID,
+        status: 'active',
+        name: `${name} DVS`,
+        identifier: [{
+          type: {
+            text: 'entityID',
+          },
+          system: 'urn:ihe:iti:csd:2013:entityID',
+          value: dvsID,
+        }],
+        type: [{
+          coding: [{
+            system: 'urn:ietf:rfc:3986',
+            code: 'urn:ihe:iti:mcsd:2019:facility',
+            display: 'Facility',
+            userSelected: false,
+          }],
+        },
+        {
+          coding: [{
+            system: 'http://hfrportal.ehealth.go.tz/facilityType',
+            code: 'DVS',
+          }],
+          text: 'Facility Type',
+        },
+        ],
+        physicalType: {
+          coding: [{
+            system: 'http://hl7.org/fhir/location-physical-type',
+            code: 'bu',
+            display: 'Building',
+          }],
+          text: 'Building',
+        },
+        managingOrganization: {
+          reference: `Organization/${orgDVS.id}`,
+        },
+        partOf: {
+          reference: `Location/${parent}`,
+        },
+      };
+      return [{
+        resource: dvs,
+        request: {
+          method: 'PUT',
+          url: `Location/${dvs.id}`,
+        },
+      }, {
+        resource: orgDVS,
+        request: {
+          method: 'PUT',
+          url: `Organization/${orgDVS.id}`,
+        },
+      }]
     },
     getRoleByTasks(tasks, callback) {
 
@@ -91,6 +176,15 @@ module.exports = function () {
       const codeSystems = config.getConf('codeSystems');
       const codeSyst = codeSystems.find(code => code.name === codeSystemType);
       return codeSyst;
+    },
+    getCodeSystemDisplay(code, codeSystem) {
+      const codeSys = codeSystem.find((cd) => {
+        return cd.code === code;
+      });
+      if (codeSys) {
+        return codeSys.display;
+      }
+      return;
     },
     toTitleCase(str) {
       if (!str) {

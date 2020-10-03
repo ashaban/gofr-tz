@@ -108,7 +108,9 @@
                 <v-flex xs5>
                   <v-select
                     clearable
-                    :items="types"
+                    item-text="display"
+                    item-value="code"
+                    :items="$store.state.facilityTypes"
                     v-model="facilityType"
                     label="Facility Type"
                   ></v-select>

@@ -116,6 +116,7 @@ router.get('/getLocationNames', (req, res) => {
 });
 
 router.get('/getLocationByID/:id', (req, res) => {
+  winston.info('Received a request to get location by id')
   const id = req.params.id;
   mcsd.getLocationByID('', id, false, (location) => {
     if (location && location.entry && location.entry.length > 0) {
@@ -123,6 +124,7 @@ router.get('/getLocationByID/:id', (req, res) => {
         return res.json(data)
       });
     } else {
+      winston.info('Location with ID ' + id + ' not found')
       return res.status(404).send();
     }
   });
@@ -421,7 +423,7 @@ router.get('/getBuildings', (req, res) => {
             );
             if (coding) {
               row.type.code = coding.code;
-              row.type.text = coding.code;
+              row.type.text = coding.display;
             }
           });
         }
@@ -531,10 +533,15 @@ router.get('/getBuildings', (req, res) => {
 
 router.post('/updateFromHFR', (req, res) => {
   winston.info('Received a request to update HFR');
+  const bundle = {
+    resourceType: 'Bundle',
+    type: 'batch',
+    entry: [],
+  };
   let errorOccured = false;
   const form = new formidable.IncomingForm();
   form.parse(req, (err, fields) => {
-    const { id, parent, level } = fields;
+    const { id, parent, parentLevel } = fields;
     const reqDB = config.getConf('hapi:requestsDBName');
     let originalResource = {}
     let hfrResource = {}
@@ -573,6 +580,41 @@ router.post('/updateFromHFR', (req, res) => {
           hfrResource = location.entry[0];
           return callback(null);
         })
+      },
+      checkDVS: (callback) => {
+        winston.info('Checking if DVS should be created')
+        let originalLevel
+        for(let type of originalResource.resource.type) {
+          for(let coding of type.coding) {
+            if(coding.system === '2.25.123494412831734081331965080571820180508') {
+              originalLevel = coding.code
+            }
+          }
+        }
+        // if level is 3 then check if DVS doesnt exist and create
+        if(originalLevel !== (parseInt(parentLevel) + 1) && parseInt(parentLevel) === 3) {
+          winston.info('Creating DVS')
+          let database = config.getConf('hapi:defaultDBName')
+          let url = URI(config.getConf('mCSD:url'))
+            .segment(database)
+            .segment('fhir')
+            .segment('Location')
+            .addQuery('partof', originalResource.resource.id)
+            .addQuery('type', 'DVS')
+            .toString();
+          mcsd.executeURL(url, (fhirDVS) => {
+            if(fhirDVS.entry.length === 0) {
+              let DVSResources = mixin.generateDVS(hfrResource.resource.name, originalResource.resource.id);
+              bundle.entry = bundle.entry.concat(DVSResources)
+            } else {
+              winston.info('DVS exists, not creating')
+            }
+            return callback(null);
+          })
+        } else {
+          winston.info('No need of creating DVS')
+          return callback(null);
+        }
       }
     }, () => {
       originalResource = lodash.merge(originalResource, hfrResource);
@@ -581,25 +623,21 @@ router.post('/updateFromHFR', (req, res) => {
           reference: `Location/${parent}`,
         };
       }
-      if(level) {
+      if(parentLevel) {
         originalResource.resource.type = [{
           coding: [{
             system: '2.25.123494412831734081331965080571820180508',
-            code: parseInt(level) + 1,
+            code: parseInt(parentLevel) + 1,
           }],
         }];
       }
-      const bundle = {
-        resourceType: 'Bundle',
-        type: 'batch',
-        entry: [{
-          resource: originalResource.resource,
-          request: {
-            method: 'PUT',
-            url: `Location/${originalResource.resource.id}`,
-          },
-        }],
-      };
+      bundle.entry.push({
+        resource: originalResource.resource,
+        request: {
+          method: 'PUT',
+          url: `Location/${originalResource.resource.id}`,
+        },
+      })
       mcsd.saveLocations(bundle, '', (err, body) => {
         if (err) {
           winston.error(err);
@@ -697,17 +735,21 @@ router.get('/getCodeSystem', (req, res) => {
   winston.info('Received a request to get code system');
   const {
     codeSystemType,
+    id
   } = req.query;
   const codeSyst = mixin.getCodesysteURI(codeSystemType);
   let codeSystemURI;
   if (codeSyst) {
     codeSystemURI = codeSyst.uri;
-  } else {
+  }
+
+  if(codeSystemType && !codeSystemURI) {
     winston.warn(`Codesystem URI ${codeSystemType} was not found on the configuration`);
     return res.status(401).send();
   }
   mcsd.getCodeSystem({
     codeSystemURI,
+    id
   },
   (codeSystem) => {
     let codeSystemResource = [];

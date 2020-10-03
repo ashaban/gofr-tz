@@ -5,6 +5,8 @@ const request = require('request');
 const URI = require('urijs');
 const express = require('express');
 const config = require('../config');
+
+const mixin = require('../mixin')();
 const mcsd = require('../mcsd')();
 
 const router = express.Router();
@@ -24,42 +26,58 @@ router.get('/syncOIM', (req, res) => {
       Authorization: auth,
     },
   };
-  request.get(options, (err, res, body) => {
-    try {
-      body = JSON.parse(body);
-    } catch (error) {
-      throw error;
-    }
-    const resourceBundle = {
-      resourceType: 'Bundle',
-      type: 'batch',
-      entry: [],
-    };
-    async.eachSeries(body.entry, (entry, nxtEntry) => {
-      if (entry.resource.name === 'Tanzania') {
-        entry.resource.partOf = {};
-        entry.resource.partOf.reference = `Location/${config.getConf('mCSD:fakeOrgId')}`;
+  let facilityTypes = [];
+  mcsd.getCodeSystem({
+    id: 'hfr-facility-types',
+  }, (facTypes) => {
+    facilityTypes = facTypes;
+    request.get(options, (err, res, body) => {
+      try {
+        body = JSON.parse(body);
+      } catch (error) {
+        throw error;
       }
-      resourceBundle.entry.push(entry);
-      if (resourceBundle.entry.length >= 250) {
-        winston.info('Saving updates into FHIR server');
-        mcsd.saveLocations(resourceBundle, '', () => {
-          winston.info('Saved');
-          resourceBundle.entry = [];
+      const resourceBundle = {
+        resourceType: 'Bundle',
+        type: 'batch',
+        entry: [],
+      };
+      async.eachSeries(body.entry, (entry, nxtEntry) => {
+        for (const tpIndex in entry.resource.type) {
+          const type = entry.resource.type[tpIndex];
+          for (const cdIndex in type.coding) {
+            const coding = type.coding[cdIndex];
+            if (coding.system === 'http://hfrportal.ehealth.go.tz/facilityType') {
+              const display = mixin.getCodeSystemDisplay(coding.code, facilityTypes.entry[0].resource.concept);
+              entry.resource.type[tpIndex].coding[cdIndex].display = display;
+            }
+          }
+        }
+        if (entry.resource.name === 'Tanzania') {
+          entry.resource.partOf = {};
+          entry.resource.partOf.reference = `Location/${config.getConf('mCSD:fakeOrgId')}`;
+        }
+        resourceBundle.entry.push(entry);
+        if (resourceBundle.entry.length >= 250) {
+          winston.info('Saving updates into FHIR server');
+          mcsd.saveLocations(resourceBundle, '', () => {
+            winston.info('Saved');
+            resourceBundle.entry = [];
+            return nxtEntry();
+          });
+        } else {
           return nxtEntry();
-        });
-      } else {
-        return nxtEntry();
-      }
-    }, () => {
-      if (resourceBundle.entry.length > 0) {
-        winston.info('Saving updates into FHIR server');
-        mcsd.saveLocations(resourceBundle, '', () => {
+        }
+      }, () => {
+        if (resourceBundle.entry.length > 0) {
+          winston.info('Saving updates into FHIR server');
+          mcsd.saveLocations(resourceBundle, '', () => {
+            winston.info('Done');
+          });
+        } else {
           winston.info('Done');
-        });
-      } else {
-        winston.info('Done');
-      }
+        }
+      });
     });
   });
 });

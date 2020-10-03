@@ -39,6 +39,7 @@ module.exports = () => ({
   getCodeSystem({
     codeSystemURI,
     code,
+    id,
     database,
   }, callback) {
     if (!database) {
@@ -54,6 +55,9 @@ module.exports = () => ({
     }
     if (code) {
       url.addQuery('code', code);
+    }
+    if (code) {
+      url.addQuery('_id', id);
     }
     url = url.toString();
     const codeSystems = {};
@@ -347,10 +351,14 @@ module.exports = () => ({
   executeURL(url, callback) {
     const locations = {};
     locations.entry = [];
+    headers = {
+      'Cache-Control': 'no-cache',
+    };
     async.doWhilst(
       (callback) => {
         const options = {
           url,
+          headers
         };
         url = false;
         request.get(options, (err, res, body) => {
@@ -944,90 +952,10 @@ module.exports = () => ({
         url: `Location/${resource.id}`,
       },
     });
-    // if level is 3 the;n also add DVS
+    // if level is 3 then also add DVS
     if (parseInt(level) === 3) {
-      const orgDVS = {
-        resourceType: 'Organization',
-        id: uuid4(),
-        meta: {
-          profile: [
-            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_Organization',
-            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_FacilityOrganization',
-          ],
-        },
-        type: [{
-          coding: [{
-            system: 'urn:ietf:rfc:3986',
-            code: 'urn:ihe:iti:mcsd:2019:facility',
-            display: 'Facility',
-            userSelected: false,
-          }],
-        }],
-        name: `${name} DVS`,
-      };
-      const dvsID = uuid4();
-      const dvs = {
-        meta: {
-          profile: [
-            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_Location',
-            'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_FacilityLocation',
-          ],
-        },
-        resourceType: 'Location',
-        id: dvsID,
-        status: 'active',
-        name: `${name} DVS`,
-        identifier: [{
-          type: {
-            text: 'entityID',
-          },
-          system: 'urn:ihe:iti:csd:2013:entityID',
-          value: dvsID,
-        }],
-        type: [{
-          coding: [{
-            system: 'urn:ietf:rfc:3986',
-            code: 'urn:ihe:iti:mcsd:2019:facility',
-            display: 'Facility',
-            userSelected: false,
-          }],
-        },
-        {
-          coding: [{
-            system: 'http://hfrportal.ehealth.go.tz/facilityType',
-            code: 'DVS',
-          }],
-          text: 'Facility Type',
-        },
-        ],
-        physicalType: {
-          coding: [{
-            system: 'http://hl7.org/fhir/location-physical-type',
-            code: 'bu',
-            display: 'Building',
-          }],
-          text: 'Building',
-        },
-        managingOrganization: {
-          reference: `Organization/${orgDVS.id}`,
-        },
-        partOf: {
-          reference: `Location/${resource.id}`,
-        },
-      };
-      fhir.entry.push({
-        resource: dvs,
-        request: {
-          method: 'PUT',
-          url: `Location/${dvs.id}`,
-        },
-      }, {
-        resource: orgDVS,
-        request: {
-          method: 'PUT',
-          url: `Organization/${orgDVS.id}`,
-        },
-      });
+      let DVSResources = mixin.generateDVS(name, resource.id);
+      fhir.entry = fhir.entry.concat(DVSResources);
     }
     this.saveLocations(fhir, database, (err, res) => {
       if (err) {

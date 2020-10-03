@@ -155,6 +155,7 @@ export default {
             this.$store.state.initializingApp = true
             this.$store.state.denyAccess = false
             eventBus.$emit('getConfig')
+            eventBus.$emit('getFacilityTypes')
           } else {
             this.authStatus = true
           }

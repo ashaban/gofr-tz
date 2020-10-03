@@ -117,7 +117,9 @@
                             <v-flex xs5>
                               <v-select
                                 clearable
-                                :items="types"
+                                item-text="display"
+                                item-value="code"
+                                :items="$store.state.facilityTypes"
                                 v-model="facilityType"
                                 label="Facility Type"
                               ></v-select>
@@ -324,22 +326,6 @@ export default {
       code: '',
       description: '',
       facilityType: '',
-      types: [{
-        text: 'Clinic',
-        value: 'CLNC'
-      }, {
-        text: 'Dispensary',
-        value: 'DSPN'
-      }, {
-        text: 'Health Center',
-        value: 'HCNT'
-      }, {
-        text: 'Health Post',
-        value: 'HPST'
-      }, {
-        text: 'Hospital',
-        value: 'HOSP'
-      }],
       ownerships: [{
         text: 'Concesion',
         value: 'CNCS'

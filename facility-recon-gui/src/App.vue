@@ -264,6 +264,11 @@ export default {
           this.getRecoStatus()
         })
     },
+    getFacilityTypes () {
+      axios.get(backendServer + '/FR/getCodeSystem?id=hfr-facility-types').then((resp) => {
+        this.$store.state.facilityTypes = resp.data
+      })
+    },
     getRecoStatus () {
       if (
         Object.keys(this.$store.state.activePair.source1).length === 0 ||
@@ -457,6 +462,7 @@ export default {
     'appMenu': Menu
   },
   created () {
+    this.getFacilityTypes()
     this.$router.push({ name: 'AddDataSources' })
     this.$store.state.config.generalConfig = this.generalConfig
     if (VueCookies.get('token') && VueCookies.get('userID')) {
@@ -491,6 +497,9 @@ export default {
     })
     eventBus.$on('getDataSources', () => {
       this.getDataSources()
+    })
+    eventBus.$on('getFacilityTypes', () => {
+      this.getFacilityTypes()
     })
     eventBus.$on('getConfig', () => {
       this.getUserConfig()
