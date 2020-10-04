@@ -50,6 +50,64 @@ router.post('/addJurisdiction', (req, res) => {
   });
 });
 
+router.post('/updateJurisdiction', (req, res) => {
+  winston.info('Received a request to update a new Jurisdiction');
+  const form = new formidable.IncomingForm();
+  form.parse(req, (err, fields, files) => {
+    const defaultDB = config.getConf('hapi:defaultDBName');
+    const url = URI(config.getConf('mCSD:url'))
+      .segment(defaultDB)
+      .segment('fhir')
+      .segment('Location')
+      .segment(fields.id)
+      .toString();
+    mcsd.executeURL(url, (jurResource) => {
+      jurResource.name = fields.name
+      jurResource.partOf.reference = 'Location/' + fields.parent
+      for(let index in jurResource.identifier) {
+        let ident = jurResource.identifier[index]
+        if(ident.system === "http://hfrportal.ehealth.go.tz" && ident.type.text === "code") {
+          jurResource.identifier[index].value = fields.code.replace(/\s+/g, ' ').trim();
+        }
+      }
+      let codeLength = fields.code.split('.').length;
+      let level = codeLength - 1;
+      for(let typIndex in jurResource.type) {
+        let type = jurResource.type[typIndex];
+        for(let codIndex in type.coding) {
+          if(type.coding[codIndex].system === '2.25.123494412831734081331965080571820180508') {
+            jurResource.type[typIndex].coding[codIndex].code = level
+          }
+        }
+      }
+      const fhir = {};
+      fhir.entry = [];
+      fhir.type = 'batch';
+      fhir.resourceType = 'Bundle';
+      fhir.entry.push({
+        resource: jurResource,
+        request: {
+          method: 'PUT',
+          url: `Location/${jurResource.id}`,
+        },
+      })
+      if(level === 4) {
+        let DVSResources = mixin.generateDVS(fields.name, jurResource.id);
+        fhir.entry = fhir.entry.concat(DVSResources);
+      }
+      mcsd.saveLocations(fhir, '', (err, body) => {
+        if (err) {
+          winston.error(err);
+          errorOccured = true;
+          return res.status(500).send();
+        }
+        winston.info('Jurisdiction updated successfully');
+        return res.status(200).send();
+      });
+    });
+  });
+});
+
 router.post('/addBuilding', (req, res) => {
   winston.info('Received a request to add a new Building');
   const form = new formidable.IncomingForm();
@@ -1308,6 +1366,12 @@ function parseLocationResource(building, database, callback) {
         for(const pr of parents.entry) {
           if(pr.resource.id === row.immediateParent.id) {
             row.immediateParent.name = pr.resource.name
+            code = pr.resource.identifier.find(
+              identifier => identifier.system === 'http://hfrportal.ehealth.go.tz' && identifier.type.text === 'code',
+            );
+            if(code) {
+              row.immediateParent.code = code.value
+            }
           }
           if(!row.parent) {
             row.parent = pr.resource.name;

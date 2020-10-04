@@ -349,7 +349,7 @@ module.exports = () => ({
   },
 
   executeURL(url, callback) {
-    const locations = {};
+    let locations = {};
     locations.entry = [];
     headers = {
       'Cache-Control': 'no-cache',
@@ -366,14 +366,15 @@ module.exports = () => ({
             return callback(false, false);
           }
           body = JSON.parse(body);
-          const next = body.link.find(link => link.relation == 'next');
+          const next = body.link && body.link.find(link => link.relation == 'next');
           if (next) {
             url = next.url;
           }
           if (body.entry && body.entry.length > 0) {
             locations.entry = locations.entry.concat(body.entry);
           } else if(!body.entry && body.resourceType === 'Location') {
-            locations.entry.push(body);
+            delete locations.entry;
+            locations = body;
           }
           return callback(false, url);
         });
@@ -954,7 +955,7 @@ module.exports = () => ({
         url: `Location/${resource.id}`,
       },
     });
-    // if level is 3 then also add DVS
+    // if parent level is 3 then also add DVS
     if (parseInt(level) === 3) {
       let DVSResources = mixin.generateDVS(name, resource.id);
       fhir.entry = fhir.entry.concat(DVSResources);

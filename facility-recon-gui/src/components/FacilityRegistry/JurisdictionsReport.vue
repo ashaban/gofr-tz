@@ -227,12 +227,32 @@ export default {
   mixins: [generalMixin],
   validations: {
     name: { required },
-    code: { required }
+    code: {
+      required,
+      isValidCode: function isValidCode (value, vm) {
+        if (!value) {
+          return false
+        }
+        let codeLength = value.split('.').length
+        if (!value.split('.')[codeLength - 1]) {
+          return false
+        }
+        if (vm.jurisdictionParent.data && parseInt(vm.jurisdictionParent.data.level) + 2 !== codeLength) {
+          return false
+        } else if (vm.jurisdictionParent.code) {
+          let parCodeLength = vm.jurisdictionParent.code.split('.').length
+          if (parCodeLength + 1 !== codeLength) {
+            return false
+          }
+        }
+        return true
+      }
+    }
   },
   props: ['action', 'requestType', 'requestCategory'],
   data () {
     return {
-      facilityId: '',
+      jurisdictionId: '',
       editDialog: false,
       loadingTree: false,
       loadingJurisdictions: false,
@@ -306,9 +326,10 @@ export default {
       this.jurisdictionParent = node
     },
     edit (item) {
-      this.facilityId = item.id
+      this.jurisdictionId = item.id
       this.jurisdictionParent.id = item.immediateParent.id
       this.jurisdictionParent.text = item.immediateParent.name
+      this.jurisdictionParent.code = item.immediateParent.code
       this.parentPath = item.parent
       this.name = item.name
       this.code = item.code
@@ -316,49 +337,30 @@ export default {
     },
     saveEdit () {
       let formData = new FormData()
-      formData.append('id', this.facilityId)
+      formData.append('id', this.jurisdictionId)
       formData.append('name', this.name)
-      formData.append('alt_name', this.alt_name)
       formData.append('code', this.code)
-      formData.append('action', this.action)
-      formData.append('requestType', this.requestType)
-      formData.append('username', this.$store.state.auth.username)
-      if (this.facilityType) {
-        formData.append('type', this.facilityType)
-      }
-      if (this.facilityStatus) {
-        formData.append('status', this.facilityStatus)
-      }
-      if (this.facilityOwnership) {
-        formData.append('ownership', this.facilityOwnership)
-      }
-      if (this.lat) {
-        formData.append('lat', this.lat)
-      }
-      if (this.long) {
-        formData.append('long', this.long)
-      }
-      formData.append('contact', JSON.stringify(this.contact))
-      if (this.description) {
-        formData.append('description', this.description)
-      }
       formData.append('parent', this.jurisdictionParent.id)
+      formData.append('username', this.$store.state.auth.username)
       this.$store.state.progressTitle = 'Saving Changes'
       this.editDialog = false
       this.$store.state.dynamicProgress = true
-      axios.post(backendServer + '/FR/addBuilding', formData, {
+      axios.post(backendServer + '/FR/updateJurisdiction', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       }).then((response) => {
         this.$store.state.dynamicProgress = false
+        this.$store.state.errorColor = 'primary'
         this.$store.state.errorTitle = 'Changes Saved'
         this.$store.state.errorDescription = 'Changes saved successfully'
         this.$store.state.dialogError = true
         this.getJurisdictions()
       }).catch((err) => {
+        this.$store.state.dynamicProgress = false
         this.$store.state.errorTitle = 'Failed To Save Changes'
         this.$store.state.errorDescription = 'Failed To Save Changes'
+        this.$store.state.errorColor = 'error'
         this.$store.state.dialogError = true
         console.log(err)
       })
@@ -389,6 +391,7 @@ export default {
       const errors = []
       if (!this.$v.code.$dirty) return errors
       !this.$v.code.required && errors.push('Code is required')
+      !this.$v.code.isValidCode && errors.push('Invalid code')
       return errors
     }
   },
