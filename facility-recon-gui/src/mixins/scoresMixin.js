@@ -55,15 +55,15 @@ export const scoresMixin = {
           this.$store.state.errorColor = 'error'
           this.$store.state.dialogError = true
           this.clearProgress('scoreResults')
-          this.$store.state.scoreSavingProgressData.savingMatches = true
-          this.checkScoreSavingStatus()
+          // this.$store.state.scoreSavingProgressData.savingMatches = true
+          // this.checkScoreSavingStatus()
           return
         } else if ((scoreProgress.data.status === null && scoreProgress.data.percent === null && scoreProgress.data.error === null && this.$store.state.scoreResults.length > 0)) {
           this.$store.state.scoresProgressData.scoreDialog = false
           this.$store.state.scoresProgressData.scoreProgressTitle = 'Waiting for progress status'
           this.clearProgress('scoreResults')
-          this.$store.state.scoreSavingProgressData.savingMatches = true
-          this.checkScoreSavingStatus()
+          // this.$store.state.scoreSavingProgressData.savingMatches = true
+          // this.checkScoreSavingStatus()
           return
         }
         this.$store.state.scoresProgressData.scoreProgressTitle = scoreProgress.data.status
@@ -76,8 +76,8 @@ export const scoresMixin = {
         }
         if (scoreProgress.data.status === 'Done' && this.$store.state.scoreResults.length === 0) {
           this.clearProgress('scoreResults')
-          this.$store.state.scoreSavingProgressData.savingMatches = true
-          this.checkScoreSavingStatus()
+          // this.$store.state.scoreSavingProgressData.savingMatches = true
+          // this.checkScoreSavingStatus()
           this.loadingSource1Unmatched = false
           this.loadingSource2Unmatched = false
           let scoresData = scoreProgress.data.responseData
@@ -96,16 +96,20 @@ export const scoresMixin = {
           this.$store.state.totalAllIgnore = scoresData.totalAllIgnore
           this.$store.state.source1TotalAllNotMapped = scoresData.source1TotalAllNotMapped
           this.$store.state.source1TotalAllRecords = scoresData.source1TotalAllRecords
-          for (let scoreResult of this.$store.state.scoreResults) {
+          for (let index in this.$store.state.scoreResults) {
+            let scoreResult = this.$store.state.scoreResults[index]
             if (scoreResult.source1.hasOwnProperty('tag') && scoreResult.source1.tag === 'flagged') {
               this.$store.state.flagged.push({
                 source1Name: scoreResult.source1.name,
                 source1Id: scoreResult.source1.id,
+                source1Code: scoreResult.source1.code,
                 source1UUID: scoreResult.source1.uuid,
                 source1IdHierarchy: scoreResult.source1.source1IdHierarchy,
                 source1Parents: scoreResult.source1.parents,
                 source2Name: scoreResult.exactMatch.name,
                 source2Id: scoreResult.exactMatch.id,
+                source2Code: scoreResult.exactMatch.code,
+                source2UUID: scoreResult.exactMatch.uuid,
                 source2IdHierarchy: scoreResult.exactMatch.source2IdHierarchy,
                 mappedParentName: scoreResult.exactMatch.mappedParentName,
                 source2Parents: scoreResult.exactMatch.parents,
@@ -116,7 +120,9 @@ export const scoresMixin = {
               this.$store.state.noMatchContent.push({
                 source1Name: scoreResult.source1.name,
                 source1Id: scoreResult.source1.id,
+                source1Code: scoreResult.source1.code,
                 source1UUID: scoreResult.source1.uuid,
+                source2UUID: scoreResult.exactMatch.uuid,
                 parents: parents
               })
             } else if (scoreResult.source1.hasOwnProperty('tag') && scoreResult.source1.tag === 'ignore') {
@@ -124,17 +130,22 @@ export const scoresMixin = {
               this.$store.state.ignoreContent.push({
                 source1Name: scoreResult.source1.name,
                 source1Id: scoreResult.source1.id,
+                source1Code: scoreResult.source1.code,
                 source1UUID: scoreResult.source1.uuid,
+                source2UUID: scoreResult.exactMatch.uuid,
                 parents: parents
               })
             } else if (Object.keys(scoreResult.exactMatch).length > 0) {
               this.$store.state.matchedContent.push({
                 source1Name: scoreResult.source1.name,
                 source1Id: scoreResult.source1.id,
+                source1Code: scoreResult.source1.code,
                 source1UUID: scoreResult.source1.uuid,
                 source1Parents: scoreResult.source1.parents,
                 source2Name: scoreResult.exactMatch.name,
                 source2Id: scoreResult.exactMatch.id,
+                source2Code: scoreResult.exactMatch.code,
+                source2UUID: scoreResult.exactMatch.uuid,
                 source2IdHierarchy: scoreResult.exactMatch.source2IdHierarchy,
                 mappedParentName: scoreResult.exactMatch.mappedParentName,
                 source2Parents: scoreResult.exactMatch.parents,
@@ -151,7 +162,8 @@ export const scoresMixin = {
               this.$store.state.source1UnMatched.push({
                 name: scoreResult.source1.name,
                 id: scoreResult.source1.id,
-                UUID: scoreResult.source1.uuid,
+                code: scoreResult.source1.code,
+                uuid: scoreResult.source1.uuid,
                 parents: scoreResult.source1.parents
               })
             }
@@ -200,6 +212,7 @@ export const scoresMixin = {
           this.$store.state.scoreSavingProgressData.percent = scoreSavingStatus.data.percent
         }
         if (scoreSavingStatus.data.percent === 100) {
+          console.log('100')
           this.$store.state.scoreSavingProgressData.savingMatches = false
           this.$store.state.scoreSavingProgressData.percent = 0
           this.clearProgress('scoreSavingStatus')
@@ -207,6 +220,7 @@ export const scoresMixin = {
           this.checkScoreSavingStatus()
         }
       }).catch((thrown) => {
+        console.log('error')
         if (this.$store.state.scoreSavingProgressData.requestCancelled) {
           this.$store.state.scoreSavingProgressData.requestCancelled = false
         } else {
@@ -267,7 +281,7 @@ export const scoresMixin = {
       let parentConstraint = JSON.stringify(this.$store.state.config.generalConfig.reconciliation.parentConstraint)
       let path = `source1=${source1}&source2=${source2}&source1Owner=${source1Owner}&source2Owner=${source2Owner}&source1LimitOrgId=${source1LimitOrgId}&source2LimitOrgId=${source2LimitOrgId}&totalSource1Levels=${totalSource1Levels}&totalSource2Levels=${totalSource2Levels}`
       path += `&recoLevel=${recoLevel}&clientId=${clientId}&userID=${userID}&parentConstraint=` + parentConstraint
-      axios.get(backendServer + '/reconcile/?' + path).then(() => {
+      axios.get(backendServer + '/esreconcile/?' + path).then(() => {
         this.checkScoreProgress()
       })
       // this.$store.state.scoresProgressData.scoreProgressTimer = setInterval(this.checkScoreProgress, 2000)

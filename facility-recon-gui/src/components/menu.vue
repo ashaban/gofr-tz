@@ -1,6 +1,6 @@
 <template>
   <ul id="menu">
-    <!-- <li class="parent"><a href="#">
+    <li class="parent"><a href="#">
         <v-icon>spellcheck</v-icon> {{$t('App.menu.facilityRecon.msg')}}
       </a>
       <ul class="child">
@@ -141,7 +141,7 @@
           </ul>
         </li>
       </ul>
-    </li> -->
+    </li>
     <li class="parent">
       <a href="#">
         <v-icon>location_on</v-icon>{{ $t('App.menu.facilityRegistry.msg')}}
@@ -547,6 +547,19 @@
                     left
                     color="black"
                   >list</v-icon>{{ $t('App.menu.facilitiesReport.msg')}}
+                </v-list-tile-title>
+              </v-list-tile>
+            </v-list>
+            <v-list
+              class="lastMenu"
+              v-if="tasksVerification.canView('FacilitiesReport')"
+            >
+              <v-list-tile to="DVSReport">
+                <v-list-tile-title class="menuText">
+                  <v-icon
+                    left
+                    color="black"
+                  >list</v-icon>{{ $t('App.menu.dvsReport.msg')}}
                 </v-list-tile-title>
               </v-list-tile>
             </v-list>

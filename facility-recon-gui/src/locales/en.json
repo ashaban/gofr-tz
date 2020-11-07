@@ -76,6 +76,10 @@
         "msg": "Facilities",
         "tooltip": "Facilities"
       },
+      "dvsReport": {
+        "msg": "District Vaccine Store (DVS)",
+        "tooltip": "District Vaccine Store (DVS)"
+      },
       "jurisdictionsReport": {
         "msg": "Administrative Areas",
         "tooltip": "Administrative Areas"

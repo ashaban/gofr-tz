@@ -1,22 +1,16 @@
-require('./init');
-const winston = require('winston');
-const request = require('request');
-const URI = require('urijs');
-const fs = require('fs');
-
-// fs.readFile('/home/ally/Desktop/bundle.json', 'utf8', (err, data) => {
-//   JSON.parse(data);
-//   // winston.error(data.substr(99600, 1000));
-// });
-const bundle = require('/home/ally/Desktop/bundle.json');
-const url = 'http://localhost:8081/gofr_empty/fhir';
-const options = {
-  url,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  json: bundle,
-};
-request.post(options, (err, res, body) => {
-  winston.error(body);
-});
+const async = require('async')
+let scoreResults = []
+let documents = [1,2,3,4]
+async.eachSeries(documents, (document, nxtDoc) => {
+  let thisRanking = {
+    potentialMatches: {},
+    exactMatch: {}
+  }
+  thisRanking.exactMatch = {
+    fname: document
+  }
+  scoreResults.push(thisRanking)
+  nxtDoc()
+}, () => {
+  console.log(scoreResults);
+})

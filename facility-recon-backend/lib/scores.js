@@ -38,6 +38,7 @@ module.exports = function () {
       parentConstraint,
       callback,
     ) {
+      winston.info("Received a request to get jurisdictions scores")
       const scoreRequestId = `scoreResults${clientId}`;
       const scoreResults = [];
       const matchBrokenCode = config.getConf('mapping:matchBrokenCode');
@@ -486,6 +487,7 @@ module.exports = function () {
       parentConstraint,
       callback,
     ) {
+      winston.info("Received a request to get buildings scores")
       const scoreRequestId = `scoreResults${clientId}`;
       const scoreResults = [];
       const matchBrokenCode = config.getConf('mapping:matchBrokenCode');
@@ -573,6 +575,7 @@ module.exports = function () {
           });
         }
       }
+      winston.info('Done populating parents')
       // clear mcsdSource2All
       mcsdSource2All = {};
       winston.info('Calculating scores now');
@@ -1019,7 +1022,7 @@ module.exports = function () {
           mcsdSource2All = {};
           callback(scoreResults, source2Unmatched, totalAllMapped, totalAllFlagged, totalAllIgnored, totalAllNoMatch);
           async.eachSeries(matchesToSave, (match, nxtMatch) => {
-            mcsd.saveMatch(match.source1Id, match.source2Id, match.source1DB, match.source2DB, match.mappingDB, match.recoLevel, match.totalLevels, 'match', true, false, () => {
+            mcsd.saveMatch(match.source1Id, match.source2Id, match.source1DB, match.recoLevel, match.totalLevels, 'match', true, false, () => {
               updateDataSavingPercent();
               return nxtMatch();
             });

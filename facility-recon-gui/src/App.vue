@@ -111,13 +111,6 @@
             >lock</v-icon> <b>{{$store.state.recoStatus}}</b>
           </template>
         </v-flex>
-        <v-spacer></v-spacer>
-        <v-flex xs1>
-          <v-select
-            :items="locales"
-            v-model="locale"
-          ></v-select>
-        </v-flex>
       </v-layout>
       <v-alert
         :style="{width: $store.state.alert.width}"
@@ -203,7 +196,6 @@ export default {
       }
       source1 = this.toTitleCase(source1)
       source2 = this.toTitleCase(source2)
-
       let sourcesOwner = this.getDatasourceOwner()
       axios
         .get(

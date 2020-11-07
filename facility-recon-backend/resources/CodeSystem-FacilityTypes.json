@@ -1,0 +1,134 @@
+{
+  "resourceType": "CodeSystem",
+  "code": "hfr-facility-types",
+  "version": "1.0.0",
+  "name": "HFR Facility Types",
+  "status": "active",
+  "content": "complete",
+  "concept": [{
+      "code": "DSP",
+      "display": "Dispensary"
+    }, {
+      "code": "HLCTR",
+      "display": "Health Center"
+    }, {
+      "code": "CLNC",
+      "display": "Clinic"
+    }, {
+      "code": "DIAL_CLNC",
+      "display": "Dialysis Clinic"
+    }, {
+      "code": "GEN_CLNC",
+      "display": "General Clinic"
+    }, {
+      "code": "MEDIC",
+      "display": "Medical Clinic"
+    }, {
+      "code": "SP_CLNC",
+      "display": "Specialized clinic"
+    }, {
+      "code": "SU_SP_CLNC",
+      "display": "Super specialized clinic"
+    }, {
+      "code": "PLY_CLNC",
+      "display": "Polyclinic"
+    }, {
+      "code": "SP_PLY_CLNC",
+      "display": "Specialized Polyclinic"
+    }, {
+      "code": "SU_SP_PLY_CLNC",
+      "display": "Super specialized Polyclinic"
+    }, {
+      "code": "PHYSIOTHERAPY",
+      "display": "Physiotherapy Clinic"
+    }, {
+      "code": "DIAG_CTR",
+      "display": "Diagnostic Centre "
+    }, {
+      "code": "OPT",
+      "display": "Optometry Clinic"
+    }, {
+      "code": "EYE",
+      "display": "Eye Clinic"
+    }, {
+      "code": "DENT",
+      "display": "Dental Clinic"
+    }, {
+      "code": "OTHCLIN",
+      "display": "Other Clinic"
+    }, {
+      "code": "NUR_HOME",
+      "display": "Nursing Home"
+    }, {
+      "code": "MAT_HOME",
+      "display": "Maternity Home"
+    }, {
+      "code": "LABS",
+      "display": "Health Labs"
+    }, {
+      "code": "LAB_SPCMN_PT",
+      "display": "Specimen collection point"
+    }, {
+      "code": "LAB_DSP",
+      "display": "Level IA2 (Dispensary Laboratory)"
+    }, {
+      "code": "LAB_HLTH_CTR",
+      "display": "Level IA1 (Health Center Laboratory)"
+    }, {
+      "code": "LAB_DIS",
+      "display": "Level IIA2 (District Laboratory)"
+    }, {
+      "code": "LAB_REG",
+      "display": "Level IIA1 (Regional Laboratory)"
+    }, {
+      "code": "LAB_MULTI",
+      "display": "Level III Multipurpose Health Laboratory"
+    }, {
+      "code": "LAB_SINGLE",
+      "display": "Level III single purpose Health Laboratory"
+    }, {
+      "code": "HOSP",
+      "display": "Hospital"
+    }, {
+      "code": "HOSP_DIS",
+      "display": "Hospital at District Level"
+    }, {
+      "code": "HOSP_REG",
+      "display": "Hospital at Regional Level"
+    }, {
+      "code": "HOSP_ZNL",
+      "display": "Hospital at Zonal Level"
+    }, {
+      "code": "HOSP_ZNL_SPR",
+      "display": "Hospital at Zonal Super Specialized Level"
+    }, {
+      "code": "REF_REG",
+      "display": "Referral Hospital at Regional Level"
+    }, {
+      "code": "NAT",
+      "display": "Referral Hospital at National Level"
+    }, {
+      "code": "ZNL_SPR_SPEC",
+      "display": "Referral Hospital at Zonal Level"
+    }, {
+      "code": "SPR_SPEC",
+      "display": "Super Specialized Hospital at National Level"
+    }, {
+      "code": "REG_REF",
+      "display": "Regional Referral Hospital"
+    }, {
+      "code": "DES_DIS",
+      "display": "Council Designated Hospital"
+    }, {
+      "code": "DIS",
+      "display": "District Hospital"
+    }, {
+      "code": "OTHHOS",
+      "display": "Other Hospital"
+    }, {
+      "code": "MAT_NUR",
+      "display": "Maternity and Nursing Home"
+    }
+
+  ]
+}

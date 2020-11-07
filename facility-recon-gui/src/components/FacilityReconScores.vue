@@ -111,7 +111,7 @@
             <v-spacer></v-spacer>
             <v-btn
               color="success"
-              @click='saveMatch'
+              @click='flag'
             >Continue</v-btn>
           </v-card-actions>
         </v-card>
@@ -151,6 +151,8 @@
             Parents:
             <b>{{selectedSource1Parents | joinParentsAndReverse}}</b>
             <v-spacer></v-spacer>
+            Code: <b>{{selectedSource1Code}}</b>
+            <v-spacer></v-spacer>
             <template v-if='$store.state.recoLevel == $store.state.totalSource1Levels'>
               Latitude:
               <b>{{selectedSource1Lat}}</b>
@@ -161,6 +163,7 @@
             </template>
           </v-card-title>
           <v-card-text>
+            <b>Potential Matches</b>
             <v-data-table
               :headers="potentialHeaders"
               :items="allPotentialMatches"
@@ -220,7 +223,7 @@
                       <v-btn
                         color="error"
                         small
-                        @click.native="match('flag', props.item.id, props.item.name, props.item.source2IdHierarchy, props.item.mappedParentName)"
+                        @click.native="match('flag', props.item.id, props.item.name, props.item.uuid, props.item.mappedParentName)"
                         slot="activator"
                       >
                         <v-icon
@@ -235,7 +238,7 @@
                         color="primary"
                         small
                         dark
-                        @click.native="match('match', props.item.id, props.item.name, props.item.source2IdHierarchy)"
+                        @click.native="match('match', props.item.id, props.item.name, props.item.uuid)"
                         slot="activator"
                       >
                         <v-icon left>thumb_up</v-icon>Save Match
@@ -244,9 +247,8 @@
                     </v-tooltip>
                   </td>
                   <td>{{props.item.name}}</td>
-                  <td>{{props.item.id}}</td>
+                  <td>{{props.item.code}}</td>
                   <td>{{props.item.parents | joinParentsAndReverse}}</td>
-                  <td v-if='$store.state.recoLevel == $store.state.totalSource1Levels'>{{props.item.geoDistance}}</td>
                   <td>{{props.item.score}}</td>
                   <td>{{potentialMatchComment(props.item)}}</td>
                 </tr>
@@ -258,33 +260,7 @@
               row
               wrap
             >
-              <v-flex xs2>
-                <v-tooltip top>
-                  <v-btn
-                    color="green"
-                    dark
-                    @click.native="noMatch('nomatch')"
-                    slot="activator"
-                  >
-                    <v-icon left>thumb_down</v-icon>No Match
-                  </v-btn>
-                  <span>Save this Source 1 location as having no match</span>
-                </v-tooltip>
-              </v-flex>
-              <v-flex xs2>
-                <v-tooltip top>
-                  <v-btn
-                    color="error"
-                    dark
-                    @click.native="noMatch('ignore')"
-                    slot="activator"
-                  >
-                    <v-icon left>thumb_down</v-icon>Ignore
-                  </v-btn>
-                  <span>Mark this source 1 location as being ignored</span>
-                </v-tooltip>
-              </v-flex>
-              <v-flex xs2>
+              <v-flex xs5>
                 <v-tooltip top>
                   <v-btn
                     v-if='potentialAvailable'
@@ -300,6 +276,7 @@
                   <span v-else>See all possible choices ignoring the score</span>
                 </v-tooltip>
               </v-flex>
+              <v-spacer></v-spacer>
               <v-flex
                 xs6
                 text-sm-right
@@ -327,31 +304,7 @@
         row
         wrap
       >
-        <v-flex xs3>
-          <appRecoExport></appRecoExport>
-        </v-flex>
         <v-spacer></v-spacer>
-        <v-flex xs2>
-          <b>Reconciling {{currentLevelText}}</b>
-        </v-flex>
-        <v-spacer></v-spacer>
-        <v-flex
-          xs1
-          sm2
-          md2
-          right
-        >
-          <v-select
-            :items="$store.state.levelArray"
-            v-model="$store.state.recoLevel"
-            :item-value='$store.state.levelArray.value'
-            :item-name='$store.state.levelArray.text'
-            label="Level"
-            single-line
-            @change="levelChanged"
-          >
-          </v-select>
-        </v-flex>
         <v-flex xs2>
           <v-btn
             v-if='!$store.state.scoreSavingProgressData.savingMatches'
@@ -547,36 +500,6 @@
                   </v-flex>
                 </v-layout>
               </v-flex>
-              <v-flex xs6>
-                <v-layout column>
-                  <v-flex align-center>
-                    <b>No Match</b>
-                  </v-flex>
-                  <v-flex xs1>
-                    <center>
-                      <b>{{source1TotalNoMatch}}/{{source1TotalRecords}}</b>
-                    </center>
-                  </v-flex>
-                  <v-flex
-                    xs1
-                    align-center
-                  >
-                    <center>
-                      <v-progress-circular
-                        :rotate="-90"
-                        :size="65"
-                        :width="8"
-                        :value="source1PercentNoMatch"
-                        color="red"
-                      >
-                        <font color="black">
-                          <b>{{source1PercentNoMatch}}%</b>
-                        </font>
-                      </v-progress-circular>
-                    </center>
-                  </v-flex>
-                </v-layout>
-              </v-flex>
             </v-layout>
           </div>
         </v-flex>
@@ -623,6 +546,7 @@
                     style="cursor: pointer"
                     :key='props.item.id'
                   >{{props.item.name}}</td>
+                  <td>{{props.item.code}}</td>
                   <td
                     v-for="(parent,index) in props.item.parents"
                     v-if='index !=props.item.parents.length-1'
@@ -671,6 +595,7 @@
                   slot-scope="props"
                 >
                   <td>{{props.item.name}} <br>&ensp;&ensp;{{props.item.parents | joinParentsAndReverse}}</td>
+                  <td>{{props.item.code}}</td>
                 </template>
               </v-data-table>
             </template>
@@ -842,7 +767,7 @@
               right
             >thumb_up</v-icon>
           </v-tab>
-          <v-tab key="nomatch">
+          <!-- <v-tab key="nomatch">
             NO MATCH ({{source1TotalNoMatch}})
             <v-icon
               color="white"
@@ -855,7 +780,7 @@
               color="white"
               right
             >thumb_down</v-icon>
-          </v-tab>
+          </v-tab> -->
           <v-tab key="flagged">
             FLAGGED ({{totalFlagged}})
             <v-icon
@@ -883,11 +808,9 @@
                   slot-scope="props"
                 >
                   <td>{{props.item.source1Name}}</td>
-                  <td>{{props.item.source1Id}}</td>
+                  <td>{{props.item.source1Code}}</td>
                   <td>{{props.item.source2Name}}</td>
-                  <td>
-                    <v-treeview :items="props.item.source2IdHierarchy" />
-                  </td>
+                  <td>{{props.item.source2Code}}</td>
                   <td v-if='props.item.matchComments'>{{props.item.matchComments.join(', ')}}</td>
                   <td v-else></td>
                   <td>
@@ -897,7 +820,7 @@
                       color="error"
                       style='text-transform: none'
                       small
-                      @click='breakMatch(props.item.source1UUID)'
+                      @click='breakMatch(props.item.source1UUID, props.item.source2UUID)'
                     >
                       <v-icon>undo</v-icon>Break Match
                     </v-btn>
@@ -906,7 +829,7 @@
                       color="error"
                       style='text-transform: none'
                       small
-                      @click='breakMatch(props.item.source1UUID)'
+                      @click='breakMatch(props.item.source1UUID, props.item.source2UUID)'
                     >
                       <v-icon>undo</v-icon>Break Match
                     </v-btn>
@@ -922,7 +845,7 @@
               ></v-progress-linear>
             </template>
           </v-tab-item>
-          <v-tab-item key="nomatch">
+          <!-- <v-tab-item key="nomatch">
             <template v-if='$store.state.noMatchContent != null'>
               <v-text-field
                 v-model="searchNotMatched"
@@ -1029,7 +952,7 @@
                 color="amber"
               ></v-progress-linear>
             </template>
-          </v-tab-item>
+          </v-tab-item> -->
           <v-tab-item key="flagged">
             <template v-if='$store.state.flagged != null'>
               <v-text-field
@@ -1050,12 +973,10 @@
                   slot-scope="props"
                 >
                   <td>{{props.item.source1Name}}</td>
-                  <td>{{props.item.source1Id}}</td>
+                  <td>{{props.item.source1Code}}</td>
                   <td>{{props.item.source2Name}}</td>
-                  <td>
-                    <v-treeview :items="props.item.source2IdHierarchy" />
-                  </td>
-                  <td>{{props.item.flagComment}}</td>
+                  <td>{{props.item.source2Code}}</td>
+                  <td>{{props.item}}</td>
                   <td>
                     <v-btn
                       v-if="$store.state.recoStatus == 'Done'"
@@ -1063,7 +984,7 @@
                       color="primary"
                       style='text-transform: none'
                       small
-                      @click='acceptFlag(props.item.source1UUID)'
+                      @click='acceptFlag(props.item.source1UUID, props.item.source2UUID)'
                     >
                       <v-icon>thumb_up</v-icon>Confirm Match
                     </v-btn>
@@ -1072,7 +993,7 @@
                       color="primary"
                       style='text-transform: none'
                       small
-                      @click='acceptFlag(props.item.source1UUID)'
+                      @click='acceptFlag(props.item.source1UUID, props.item.source2UUID)'
                     >
                       <v-icon>thumb_up</v-icon>Confirm Match
                     </v-btn>
@@ -1184,22 +1105,24 @@ export default {
       selectedSource1Name: null,
       selectedSource1Id: null,
       selectedSource1UUID: null,
+      selectedSource2UUID: null,
       selectedSource1Lat: null,
       selectedSource1Long: null,
+      selectedSource1Code: null,
       selectedSource1Parents: [],
       dialog: false,
       dialogWidth: '',
-      source1UnmatchedHeaders: [{ text: 'Location', value: 'name' }],
+      source1UnmatchedHeaders: [{ text: 'Name', value: 'name' }, { text: 'Code', value: 'code' }],
       noMatchHeaders: [
         { text: 'Source 1 Location', value: 'source1Name' },
-        { text: 'Source 1 ID', value: 'source1Id' },
+        { text: 'Source 1 Code', value: 'source1Code' },
         { text: 'Parents', value: 'parents' }
       ],
       flaggedHeaders: [
         { text: 'Source 1 Location', value: 'source1Name' },
-        { text: 'Source 1 ID', value: 'source1Id' },
+        { text: 'Source 1 Code', value: 'source1Code' },
         { text: 'Source 2 Location', value: 'source2Name' },
-        { text: 'Source 2 ID', value: 'source2Id' },
+        { text: 'Source 2 Code', value: 'source2Code' },
         { text: 'Comment', value: 'flagComment' }
       ]
     }
@@ -1275,6 +1198,7 @@ export default {
           this.selectedSource1Parents = scoreResult.source1.parents
           this.selectedSource1Lat = scoreResult.source1.lat
           this.selectedSource1Long = scoreResult.source1.long
+          this.selectedSource1Code = scoreResult.source1.code
           this.selectedSource1Id = scoreResult.source1.id
           this.selectedSource1UUID = scoreResult.source1.uuid
           for (let score in scoreResult.potentialMatches) {
@@ -1296,7 +1220,8 @@ export default {
                 score: score,
                 name: potentials.name,
                 id: potentials.id,
-                source2IdHierarchy: potentials.source2IdHierarchy,
+                code: potentials.code,
+                uuid: potentials.uuid,
                 lat: potentials.lat,
                 long: potentials.long,
                 geoDistance: potentials.geoDistance,
@@ -1313,27 +1238,11 @@ export default {
       let comment = ''
       // check if ID different
       if (this.$store.state.recoLevel === this.$store.state.totalSource1Levels) {
-        let source1IDs = []
-        let source2IDs = []
-        if (this.selectedSource1.source1IdHierarchy) {
-          source1IDs.push(this.selectedSource1.source1IdHierarchy[0].id)
-          for (let child of this.selectedSource1.source1IdHierarchy[0].children) {
-            source1IDs.push(child.id)
-          }
-        }
-        if (potentialMatch.source2IdHierarchy) {
-          source2IDs.push(potentialMatch.source2IdHierarchy[0].id)
-          for (let child of potentialMatch.source2IdHierarchy[0].children) {
-            source2IDs.push(child.id)
-          }
-        }
-
-        let exist = source1IDs.some(id1 => source2IDs.indexOf(id1) >= 0)
-        if (!exist) {
+        if (potentialMatch.code !== this.selectedSource1.code) {
           if (comment) {
             comment += ', '
           }
-          comment += 'ID differ'
+          comment += 'Code differ'
         }
       }
 
@@ -1345,23 +1254,13 @@ export default {
         comment += 'Names differ'
       }
 
-      // check if parents are different
-      const source2Parent = potentialMatch.mappedParentName
-      const source1Parent = this.selectedSource1.parents[0]
-      if (source1Parent !== source2Parent) {
-        if (comment) {
-          comment += ', '
-        }
-        comment += 'Parents differ'
-      }
-
       return comment
     },
-    match (type, source2Id, source2Name, source2IdHierarchy, mappedParentName) {
+    match (type, source2Id, source2Name, source2uuid, mappedParentName) {
       this.matchType = type
       this.source2Id = source2Id
       this.source2Name = source2Name
-      this.source2IdHierarchy = source2IdHierarchy
+      this.selectedSource2UUID = source2uuid
       this.mappedParentName = mappedParentName
       if (source2Id === null) {
         this.alert = true
@@ -1375,24 +1274,17 @@ export default {
         this.saveMatch()
       }
     },
-    saveMatch () {
+    flag () {
       this.flagCommentDialog = false
-      this.$store.state.progressTitle = 'Saving match'
+      this.$store.state.progressTitle = 'Saving flag'
       this.$store.state.dynamicProgress = true
-      let sourcesOwner = this.getDatasourceOwner()
       let formData = new FormData()
       formData.append('source1Id', this.selectedSource1UUID)
       formData.append('source2Id', this.source2Id)
-      formData.append('source1Owner', sourcesOwner.source1Owner)
-      formData.append('source2Owner', sourcesOwner.source2Owner)
       formData.append('flagComment', this.flagComment)
       formData.append('source1DB', this.getSource1())
-      formData.append('source2DB', this.getSource2())
-      formData.append('recoLevel', this.$store.state.recoLevel)
-      formData.append('totalLevels', this.$store.state.totalSource1Levels)
-      formData.append('userID', this.$store.state.activePair.userID._id)
       axios
-        .post(backendServer + '/match/' + this.matchType, formData, {
+        .post(backendServer + '/flag', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -1401,45 +1293,35 @@ export default {
           this.$store.state.dynamicProgress = false
           // remove from Source 2 Unmatched
           let source2Parents = null
+          let source2UUID
+          let source2Code
           for (let k in this.$store.state.source2UnMatched) {
             if (this.$store.state.source2UnMatched[k].id === this.source2Id) {
               source2Parents = this.$store.state.source2UnMatched[k].parents
+              source2UUID = this.$store.state.source2UnMatched[k].uuid
+              source2Code = this.$store.state.source2UnMatched[k].code
               this.$store.state.source2UnMatched.splice(k, 1)
             }
           }
 
-          // Add from a list of Source 1 Matched and remove from list of Source 1 unMatched
+          // Add from a list of flagged and remove from list of Source 1 unMatched
           for (let k in this.$store.state.source1UnMatched) {
-            if (this.$store.state.source1UnMatched[k].UUID === this.selectedSource1UUID) {
-              if (this.matchType === 'match') {
-                ++this.$store.state.totalAllMapped
-                this.$store.state.matchedContent.push({
-                  source1Name: this.selectedSource1Name,
-                  source1Id: this.selectedSource1Id,
-                  source1UUID: this.selectedSource1UUID,
-                  source1Parents: this.$store.state.source1UnMatched[k].parents,
-                  source2Name: this.source2Name,
-                  source2Id: this.source2Id,
-                  source2IdHierarchy: this.source2IdHierarchy,
-                  mappedParentName: this.mappedParentName,
-                  source2Parents: source2Parents,
-                  matchComments: response.data.matchComments
-                })
-              } else if (this.matchType === 'flag') {
-                ++this.$store.state.totalAllFlagged
-                this.$store.state.flagged.push({
-                  source1Name: this.selectedSource1Name,
-                  source1Id: this.selectedSource1Id,
-                  source1UUID: this.selectedSource1UUID,
-                  source1Parents: this.$store.state.source1UnMatched[k].parents,
-                  source2Name: this.source2Name,
-                  source2Id: this.source2Id,
-                  source2IdHierarchy: this.source2IdHierarchy,
-                  mappedParentName: this.mappedParentName,
-                  source2Parents: source2Parents,
-                  flagComment: this.flagComment
-                })
-              }
+            if (this.$store.state.source1UnMatched[k].uuid === this.selectedSource1UUID) {
+              ++this.$store.state.totalAllFlagged
+              this.$store.state.flagged.push({
+                source1Name: this.selectedSource1Name,
+                source1Id: this.selectedSource1Id,
+                source1Code: this.$store.state.source1UnMatched[k].code,
+                source1UUID: this.selectedSource1UUID,
+                source1Parents: this.$store.state.source1UnMatched[k].parents,
+                source2Name: this.source2Name,
+                source2Id: this.source2Id,
+                source2Code: source2Code,
+                source2UUID: source2UUID,
+                mappedParentName: this.mappedParentName,
+                source2Parents: source2Parents,
+                flagComment: this.flagComment
+              })
               this.$store.state.source1UnMatched.splice(k, 1)
             }
           }
@@ -1461,35 +1343,82 @@ export default {
           this.dialog = false
         })
     },
-    acceptFlag (source1UUID) {
-      this.$store.state.progressTitle = 'Accepting flag'
+    saveMatch (type) {
+      this.flagCommentDialog = false
+      this.$store.state.progressTitle = 'Saving match'
       this.$store.state.dynamicProgress = true
       let formData = new FormData()
-      formData.append('source1Id', source1UUID)
-      let userID = this.$store.state.activePair.userID._id
+      formData.append('source1Id', this.selectedSource1UUID)
+      formData.append('source2Id', this.selectedSource2UUID)
+      formData.append('source1DB', this.getSource1())
       axios
-        .post(backendServer + '/acceptFlag/' + this.getSource1() + '/' + this.getSource2() + '/' + userID, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
-        .then(() => {
+        .post(backendServer + '/match', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        })
+        .then(response => {
           this.$store.state.dynamicProgress = false
-          // Add from a list of Source 1 Matched and remove from list of Flagged
-          for (let k in this.$store.state.flagged) {
-            if (this.$store.state.flagged[k].source1UUID === source1UUID) {
-              this.$store.state.matchedContent.push({
-                source1Name: this.$store.state.flagged[k].source1Name,
-                source1Id: this.$store.state.flagged[k].source1Id,
-                source1UUID: this.$store.state.flagged[k].source1UUID,
-                source1Parents: this.$store.state.flagged[k].source1Parents,
-                source2Name: this.$store.state.flagged[k].source2Name,
-                source2Id: this.$store.state.flagged[k].source2Id,
-                source2IdHierarchy: this.$store.state.flagged[k].source2IdHierarchy,
-                mappedParentName: this.$store.state.flagged[k].mappedParentName,
-                source2Parents: this.$store.state.flagged[k].source2Parents
-              })
-              this.$store.state.flagged.splice(k, 1)
-              ++this.$store.state.totalAllMapped
-              --this.$store.state.totalAllFlagged
+          // remove from Source 2 Unmatched
+          let source2Parents = null
+          let source2Code
+          for (let k in this.$store.state.source2UnMatched) {
+            if (this.$store.state.source2UnMatched[k].id === this.source2Id) {
+              source2Parents = this.$store.state.source2UnMatched[k].parents
+              source2Code = this.$store.state.source2UnMatched[k].code
+              this.$store.state.source2UnMatched.splice(k, 1)
             }
           }
+
+          // Add from a list of Source 1 Matched and remove from list of Source 1 unMatched
+          for (let k in this.$store.state.source1UnMatched) {
+            if (this.$store.state.source1UnMatched[k].uuid === this.selectedSource1UUID) {
+              ++this.$store.state.totalAllMapped
+              this.$store.state.matchedContent.push({
+                source1Name: this.selectedSource1Name,
+                source1Id: this.selectedSource1Id,
+                source1Code: this.$store.state.source1UnMatched[k].code,
+                source1UUID: this.selectedSource1UUID,
+                source1Parents: this.$store.state.source1UnMatched[k].parents,
+                source2Name: this.source2Name,
+                source2Id: this.source2Id,
+                source2Code: source2Code,
+                source2UUID: this.selectedSource2UUID,
+                mappedParentName: this.mappedParentName,
+                source2Parents: source2Parents,
+                matchComments: response.data.matchComments
+              })
+              this.$store.state.source1UnMatched.splice(k, 1)
+            }
+          }
+          if (type === 'flag') {
+            for (let k in this.$store.state.flagged) {
+              if (this.$store.state.flagged[k].source1UUID === this.selectedSource1UUID) {
+                this.$store.state.matchedContent.push({
+                  source1Name: this.$store.state.flagged[k].source1Name,
+                  source1Id: this.$store.state.flagged[k].source1Id,
+                  source1Code: this.$store.state.flagged[k].source1Code,
+                  source1UUID: this.$store.state.flagged[k].source1UUID,
+                  source1Parents: this.$store.state.flagged[k].source1Parents,
+                  source2Name: this.$store.state.flagged[k].source2Name,
+                  source2Id: this.$store.state.flagged[k].source2Id,
+                  source2Code: this.$store.state.flagged[k].source2Code,
+                  source2UUID: this.selectedSource2UUID,
+                  source2IdHierarchy: this.$store.state.flagged[k].source2IdHierarchy,
+                  mappedParentName: this.$store.state.flagged[k].mappedParentName,
+                  source2Parents: this.$store.state.flagged[k].source2Parents
+                })
+                this.$store.state.flagged.splice(k, 1)
+                ++this.$store.state.totalAllMapped
+                --this.$store.state.totalAllFlagged
+              }
+            }
+          }
+          this.selectedSource1Id = null
+          this.selectedSource1UUID = null
+          this.selectedSource2UUID = null
+          this.selectedSource1Name = null
+          this.dialog = false
         })
         .catch(err => {
           this.$store.state.dynamicProgress = false
@@ -1498,20 +1427,24 @@ export default {
           this.alertText = err.response.data.error
           this.selectedSource1Id = null
           this.selectedSource1UUID = null
+          this.selectedSource2UUID = null
           this.selectedSource1Name = null
           this.dialog = false
-          console.log(err)
         })
     },
-    breakMatch (source1UUID) {
+    acceptFlag (source1UUID, source2UUID) {
+      this.selectedSource1UUID = source1UUID
+      this.selectedSource2UUID = source2UUID
+      this.saveMatch('flag')
+    },
+    breakMatch (source1UUID, source2UUID) {
       this.$store.state.progressTitle = 'Breaking match'
       this.$store.state.dynamicProgress = true
       let formData = new FormData()
-      let userID = this.$store.state.activePair.userID._id
-      let sourcesOwner = this.getDatasourceOwner()
       formData.append('source1Id', source1UUID)
+      formData.append('source2Id', source2UUID)
       axios
-        .post(backendServer + '/breakMatch/' + this.getSource1() + '/' + this.getSource2() + '/' + sourcesOwner.source1Owner + '/' + sourcesOwner.source2Owner + '/' + userID, formData, {
+        .post(backendServer + '/breakMatch/' + this.getSource1(), formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -1527,13 +1460,15 @@ export default {
               this.$store.state.source1UnMatched.push({
                 name: this.$store.state.matchedContent[k].source1Name,
                 id: this.$store.state.matchedContent[k].source1Id,
-                UUID: this.$store.state.matchedContent[k].source1UUID,
+                code: this.$store.state.matchedContent[k].source1Code,
+                uuid: this.$store.state.matchedContent[k].source1UUID,
                 parents: this.$store.state.matchedContent[k].source1Parents
               })
               this.$store.state.source2UnMatched.push({
                 name: this.$store.state.matchedContent[k].source2Name,
                 id: this.$store.state.matchedContent[k].source2Id,
-                source2IdHierarchy: this.$store.state.matchedContent[k].source2IdHierarchy,
+                code: this.$store.state.matchedContent[k].source2Code,
+                uuid: this.$store.state.matchedContent[k].source2UUID,
                 mappedParentName: this.$store.state.matchedContent[k].mappedParentName,
                 parents: this.$store.state.matchedContent[k].source2Parents
               })
@@ -1558,51 +1493,49 @@ export default {
       this.$store.state.progressTitle = 'Unflagging match'
       this.$store.state.dynamicProgress = true
       let formData = new FormData()
-      let userID = this.$store.state.activePair.userID._id
-      let sourcesOwner = this.getDatasourceOwner()
       formData.append('source1Id', source1UUID)
-      axios
-        .post(backendServer + '/breakMatch/' + this.getSource1() + '/' + this.getSource2() + '/' + sourcesOwner.source1Owner + '/' + sourcesOwner.source2Owner + '/' + userID, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
+      formData.append('source1DB', this.getSource1())
+      axios.post(backendServer + '/unflag', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }).then(data => {
+        this.$store.state.dynamicProgress = false
+        this.alert = true
+        this.alertTitle = 'Information'
+        this.alertText = 'Scores for this Location may not be available unless you recalculate scores'
+        for (let k in this.$store.state.flagged) {
+          if (this.$store.state.flagged[k].source1UUID === source1UUID) {
+            this.$store.state.source1UnMatched.push({
+              name: this.$store.state.flagged[k].source1Name,
+              id: this.$store.state.flagged[k].source1Id,
+              code: this.$store.state.flagged[k].source1Code,
+              uuid: this.$store.state.flagged[k].source1UUID,
+              parents: this.$store.state.flagged[k].source1Parents
+            })
+            this.$store.state.source2UnMatched.push({
+              name: this.$store.state.flagged[k].source2Name,
+              id: this.$store.state.flagged[k].source2Id,
+              code: this.$store.state.flagged[k].source2Code,
+              uuid: this.$store.state.flagged[k].source2UUID,
+              mappedParentName: this.$store.state.flagged[k].mappedParentName,
+              parents: this.$store.state.flagged[k].source2Parents
+            })
+            this.$store.state.flagged.splice(k, 1)
+            --this.$store.state.totalAllFlagged
           }
         }
-        ).then(data => {
-          this.$store.state.dynamicProgress = false
-          this.alert = true
-          this.alertTitle = 'Information'
-          this.alertText = 'Scores for this Location may not be available unless you recalculate scores'
-          for (let k in this.$store.state.flagged) {
-            if (this.$store.state.flagged[k].source1UUID === source1UUID) {
-              this.$store.state.source1UnMatched.push({
-                name: this.$store.state.flagged[k].source1Name,
-                id: this.$store.state.flagged[k].source1Id,
-                UUID: this.$store.state.flagged[k].source1UUID,
-                parents: this.$store.state.flagged[k].source1Parents
-              })
-              this.$store.state.source2UnMatched.push({
-                name: this.$store.state.flagged[k].source2Name,
-                id: this.$store.state.flagged[k].source2Id,
-                source2IdHierarchy: this.$store.state.flagged[k].source2IdHierarchy,
-                mappedParentName: this.$store.state.flagged[k].mappedParentName,
-                parents: this.$store.state.flagged[k].source2Parents
-              })
-              this.$store.state.flagged.splice(k, 1)
-              --this.$store.state.totalAllFlagged
-            }
-          }
-        })
-        .catch(err => {
-          this.$store.state.dynamicProgress = false
-          this.alert = true
-          this.alertTitle = 'Error'
-          this.alertText = err.response.data.error
-          this.selectedSource1Id = null
-          this.selectedSource1UUID = null
-          this.selectedSource1Name = null
-          this.dialog = false
-          console.log(err)
-        })
+      }).catch(err => {
+        this.$store.state.dynamicProgress = false
+        this.alert = true
+        this.alertTitle = 'Error'
+        this.alertText = err.response.data.error
+        this.selectedSource1Id = null
+        this.selectedSource1UUID = null
+        this.selectedSource1Name = null
+        this.dialog = false
+        console.log(err)
+      })
     },
     breakNoMatch (source1UUID, type) {
       this.$store.state.progressTitle = 'Breaking no match'
@@ -1631,7 +1564,8 @@ export default {
                 this.$store.state.source1UnMatched.push({
                   name: this.$store.state.noMatchContent[k].source1Name,
                   id: this.$store.state.noMatchContent[k].source1Id,
-                  UUID: this.$store.state.noMatchContent[k].source1UUID,
+                  code: this.$store.state.noMatchContent[k].source1Code,
+                  uuid: this.$store.state.noMatchContent[k].source1UUID,
                   parents: this.$store.state.noMatchContent[k].parents
                 })
                 this.$store.state.noMatchContent.splice(k, 1)
@@ -1644,7 +1578,8 @@ export default {
                 this.$store.state.source1UnMatched.push({
                   name: this.$store.state.ignoreContent[k].source1Name,
                   id: this.$store.state.ignoreContent[k].source1Id,
-                  UUID: this.$store.state.ignoreContent[k].source1UUID,
+                  code: this.$store.state.ignoreContent[k].source1Code,
+                  uuid: this.$store.state.ignoreContent[k].source1UUID,
                   parents: this.$store.state.ignoreContent[k].parents
                 })
                 this.$store.state.ignoreContent.splice(k, 1)
@@ -1703,10 +1638,7 @@ export default {
             }
           } else if (type === 'ignore') {
             for (let k in this.$store.state.source1UnMatched) {
-              if (
-                this.$store.state.source1UnMatched[k].id ===
-                this.selectedSource1Id
-              ) {
+              if (this.$store.state.source1UnMatched[k].id === this.selectedSource1Id) {
                 this.$store.state.ignoreContent.push({
                   source1Name: this.selectedSource1Name,
                   source1Id: this.selectedSource1Id,
@@ -1758,15 +1690,15 @@ export default {
     matchedHeaders () {
       let header = [
         { text: 'Source1 Location', value: 'source1Name' },
-        { text: 'Source1 ID', value: 'source1Id' },
+        { text: 'Source1 Code', value: 'source1Code' },
         { text: 'Source2 Location', value: 'source2Name' },
-        { text: 'Source2 ID', value: 'source2Id' },
+        { text: 'Source2 Code', value: 'source2Code' },
         { text: 'Match Comment', value: 'matchComments' }
       ]
       return header
     },
     source1GridHeaders () {
-      let header = [{ text: 'Location', value: 'name' }]
+      let header = [{ text: 'Name', value: 'name' }]
       if (this.$store.state.source1UnMatched.length > 0) {
         for (
           let i = this.$store.state.source1UnMatched[0].parents.length;
@@ -1777,6 +1709,7 @@ export default {
         }
       }
       header.splice(1, 1)
+      header.push({ text: 'Code', value: 'code' })
       return header
     },
     potentialHeaders () {
@@ -1784,18 +1717,10 @@ export default {
       results.push(
         { sortable: false },
         { text: 'Source 2 Location', value: 'name', sortable: false },
-        { text: 'ID', value: 'id', sortable: false },
+        { text: 'Code', value: 'code', sortable: false },
         { text: 'Parent', value: 'source2Parent', sortable: false }
       )
-      if (this.$store.state.recoLevel === this.$store.state.totalSource1Levels) {
-        results.push({
-          text: 'Geo Dist (Miles)',
-          value: 'geodist',
-          sortable: false
-        })
-      }
       results.push({ text: 'Score', value: 'score' })
-      results.push({ text: 'Comment', value: 'comment' })
       return results
     },
     potentialAvailable () {
@@ -1818,9 +1743,6 @@ export default {
           })
           if (!matched) {
             addIt.score = 'N/A'
-            if (!addIt.source2IdHierarchy && addIt.source2IdHierarchy) {
-              addIt.source2IdHierarchy = addIt.source2IdHierarchy
-            }
             results.push(addIt)
           }
         }
@@ -1831,6 +1753,12 @@ export default {
     },
     source1Tree () {
       this.addListener()
+      let activeDtSrc1 = this.$store.state.dataSources.find((dtsrc) => {
+        return dtsrc._id === this.$store.state.activePair.source1.id
+      })
+      if (activeDtSrc1.source === 'vims') {
+        return
+      }
       const createTree = (current, results) => {
         for (let name in current) {
           let add = { text: name }

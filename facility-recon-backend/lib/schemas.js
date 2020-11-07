@@ -107,13 +107,11 @@ const DataSources = new mongoose.Schema({
   userID: {
     type: Schema.Types.ObjectId,
     ref: 'Users',
-    required: true,
   },
   owner: {
     id: {
       type: Schema.Types.ObjectId,
       ref: 'Users',
-      required: true,
     },
     orgId: {
       type: String,

@@ -18,6 +18,7 @@ const redis = require('redis');
 const cache = require('memory-cache');
 const moment = require('moment');
 const lodash = require('lodash');
+const cacheFHIR2ES = require('./cacheFHIR2ES')
 const mail = require('./mail')();
 const mongo = require('./mongo')();
 const mixin = require('./mixin')();
@@ -73,7 +74,7 @@ module.exports = () => ({
             return callback(false, false);
           }
           const mcsd = JSON.parse(body);
-          const next = mcsd.link.find(link => link.relation == 'next');
+          const next = mcsd.link && mcsd.link.find(link => link.relation == 'next');
           if (next) {
             url = next.url;
           }
@@ -83,7 +84,9 @@ module.exports = () => ({
           return callback(false, url);
         });
       },
-      () => url != false,
+      (err, callback) => {
+        return callback(null, url != false)
+      },
       () => {
         callback(codeSystems);
       },
@@ -151,7 +154,9 @@ module.exports = () => ({
           return callback(false, url);
         });
       },
-      () => url != false,
+      (err, callback) => {
+        return callback(null, url !== false)
+      },
       () => {
         callback(organizations);
       },
@@ -222,7 +227,9 @@ module.exports = () => ({
           return callback(false, url);
         });
       },
-      () => url != false,
+      (err, callback) => {
+        return callback(null, url !== false)
+      },
       () => {
         if (services.entry.length > 1) {
           winston.info(`Saving ${baseUrl} to cache`);
@@ -287,7 +294,9 @@ module.exports = () => ({
           return callback(false, url);
         });
       },
-      () => url != false,
+      (err, callback) => {
+        return callback(null, url !== false)
+      },
       () => {
         if (locations.entry.length > 1) {
           winston.info(`Saving ${baseUrl} to cache`);
@@ -328,20 +337,22 @@ module.exports = () => ({
         url = false;
         request.get(options, (err, res, body) => {
           if (!isJSON(body)) {
-            return callback(false, false);
+            return callback(null, false);
           }
           const mcsd = JSON.parse(body);
-          const next = mcsd.link.find(link => link.relation == 'next');
+          const next = mcsd.link && mcsd.link.find(link => link.relation == 'next');
           if (next) {
             url = next.url;
           }
           if (mcsd.entry && mcsd.entry.length > 0) {
             locations.entry = locations.entry.concat(mcsd.entry);
           }
-          return callback(false, url);
+          return callback(null, url);
         });
       },
-      () => url != false,
+      (err, callback) => {
+        return callback(null, url !== false)
+      },
       () => {
         callback(locations);
       },
@@ -379,7 +390,9 @@ module.exports = () => ({
           return callback(false, url);
         });
       },
-      () => url != false,
+      (err, callback) => {
+        return callback(null, url !== false)
+      },
       () => {
         callback(locations);
       },
@@ -417,7 +430,9 @@ module.exports = () => ({
           return callback(false, url);
         });
       },
-      () => url != false,
+      (err, callback) => {
+        return callback(null, url !== false)
+      },
       () => {
         callback(locations);
       },
@@ -477,7 +492,9 @@ module.exports = () => ({
           return doCallback(false, url);
         });
       },
-      () => url != false,
+      (err, callback) => {
+        return callback(null, url !== false)
+      },
       () => callback(locations),
     );
   },
@@ -507,7 +524,9 @@ module.exports = () => ({
           return callback(false, url);
         });
       },
-      () => url != false,
+      (err, callback) => {
+        return callback(null, url !== false)
+      },
       () => {
         callback(false, locations);
       },
@@ -1968,6 +1987,39 @@ module.exports = () => ({
     });
   },
 
+  '$meta-delete'({
+    resourceParameters,
+    resourceType,
+    resourceID,
+    database
+  }) {
+    if (!database) {
+      database = config.getConf('hapi:defaultDBName');
+    }
+    return new Promise((resolve) => {
+      const url = URI(config.getConf('mCSD:url'))
+        .segment(database)
+        .segment('fhir')
+        .segment(resourceType)
+        .segment(resourceID)
+        .segment('$meta-delete')
+        .toString();
+      const options = {
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        json: resourceParameters,
+      };
+      request.post(options, (err, res, body) => {
+        if(err || !res.statusCode || (res.statusCode < 200 && res.statusCode > 299)) {
+          return reject();
+        }
+        return resolve();
+      });
+    });
+  },
+
   deleteLocation(id, sourceId, sourceName, sourceOwner, userID, callback) {
     mongo.getMappingDBs(sourceId, (dbs) => {
       async.parallel({
@@ -1982,6 +2034,7 @@ module.exports = () => ({
             url,
           };
           request.delete(options, (err, res, body) => {
+            cacheFHIR2ES.cacheFHIR()
             this.cleanCache(url_prefix.toString());
             return callback1(false);
           });
@@ -2049,6 +2102,7 @@ module.exports = () => ({
         winston.error(err);
         return callback(err);
       }
+      cacheFHIR2ES.cacheFHIR()
       this.cleanCache(`${url}/Location`);
       callback(err, body);
     });
@@ -2068,237 +2122,200 @@ module.exports = () => ({
       });
     }
   },
-  saveMatch(source1Id, source2Id, source1DB, source2DB, mappingDB, recoLevel, totalLevels, type, autoMatch, flagComment, callback) {
-    const flagCode = config.getConf('mapping:flagCode');
-    const autoMatchedCode = config.getConf('mapping:autoMatchedCode');
-    const manualllyMatchedCode = config.getConf('mapping:manualllyMatchedCode');
-    const matchCommentsCode = config.getConf('mapping:matchCommentsCode');
-    const flagCommentCode = config.getConf('mapping:flagCommentCode');
-    const fakeOrgId = config.getConf('mCSD:fakeOrgId');
-    const source1System = 'https://digitalhealth.intrahealth.org/source1';
-    const source2System = 'https://digitalhealth.intrahealth.org/source2';
+  flag(source1Id, source2Id, source1DB, flagComment, callback) {
+    winston.info('Flagging facility')
+    this.getLocationByID(source1DB, source1Id, false, (location) => {
+      if(location.entry.length === 0) {
+        winston.info('No location with id ' + source1Id + ' found, cant add match flag')
+        return callback()
+      }
+      if (!location.entry[0].resource.extension) {
+        location.entry[0].resource.extension = [];
+      }
+      location.entry[0].resource.extension.push({
+        url: 'https://digitalhealth.intrahealth.org/flag',
+        extension: [{
+          url: 'flaggedTo',
+          valueString: source2Id
+        }, {
+          url: 'comment',
+          valueString: flagComment
+        }]
+      })
+      location.type = 'batch'
+      location.resourceType = 'Bundle'
+      location.entry[0].request = {};
+      location.entry[0].request.method = 'PUT';
+      location.entry[0].request.url = `Location/${location.entry[0].resource.id}`;
+      this.saveLocations(location, source1DB, (err, res) => {
+        if(err) {
+          winston.error(err)
+        }
+        callback(err)
+      })
+    })
+  },
+  unflag(source1Id, source1DB, callback) {
+    winston.info('Unflagging facility')
+    this.getLocationByID(source1DB, source1Id, false, (location) => {
+      if(location.entry.length === 0) {
+        winston.info('No location with id ' + source1Id + ' found, cant add match flag')
+        return callback()
+      }
+      if (!location.entry[0].resource.extension) {
+        return callback()
+      }
+      for(let index in location.entry[0].resource.extension) {
+        let ext = location.entry[0].resource.extension[index]
+        if(ext.url === 'https://digitalhealth.intrahealth.org/flag') {
+          location.entry[0].resource.extension.splice(index, 1)
+        }
+      }
+      location.type = 'batch'
+      location.resourceType = 'Bundle'
+      location.entry[0].request = {};
+      location.entry[0].request.method = 'PUT';
+      location.entry[0].request.url = `Location/${location.entry[0].resource.id}`;
+      this.saveLocations(location, source1DB, (err, res) => {
+        if(err) {
+          winston.error(err)
+        }
+        callback(err)
+      })
+    })
+  },
+  saveMatch(source1Id, source2Id, source1DB, callback) {
+    winston.error(source1Id + ' ' + source2Id + ' ' + source1DB)
+    winston.info("Saving match")
+    let identifierSystem
+    if(config.getConf("vims:tenancyid") === source1DB) {
+      identifierSystem = 'https://vims.moh.go.tz'
+    } else if(config.getConf("dhis2:tenancyid") === source1DB) {
+      identifierSystem = 'tanzania-hmis'
+    }
+    let source2DB = config.getConf("hfr:tenancyid")
     // check if its already mapped and ignore
 
     const me = this;
     async.parallel({
-      source2Mapped(callback) {
-        const source2Identifier = URI(config.getConf('mCSD:url'))
-          .segment(source2DB)
-          .segment('fhir')
-          .segment('Location')
-          .segment(source2Id)
-          .toString();
-        me.getLocationByIdentifier(mappingDB, source2Identifier, (mapped) => {
-          if (mapped.entry.length > 0) {
-            winston.error('Attempting to map already mapped location');
-            return callback(null, 'This location was already mapped, recalculate scores to update the level you are working on');
-          }
-          return callback(null, null);
-        });
-      },
-      source1Mapped(callback) {
-        me.getLocationByID(mappingDB, source1Id, false, (mapped) => {
-          if (mapped.entry.length > 0) {
-            winston.error('Attempting to map already mapped location');
-            return callback(null, 'This location was already mapped, recalculate scores to update the level you are working on');
-          }
-          return callback(null, null);
-        });
-      },
       source1mCSD(callback) {
-        me.getLocationByID(source1DB, source1Id, false, mcsd => callback(null, mcsd));
+        me.getLocationByID(source1DB, source1Id, false, (mcsd) => {
+          callback(null, mcsd)
+        });
       },
       source2mCSD(callback) {
         me.getLocationByID(source2DB, source2Id, false, mcsd => callback(null, mcsd));
-      },
-      source1Parents(callback) {
-        me.getLocationParentsFromDB(source1DB, source1Id, fakeOrgId, 'id', parents => callback(null, parents));
-      },
-      source2Parents(callback) {
-        me.getLocationParentsFromDB(source2DB, source2Id, fakeOrgId, 'id', parents => callback(null, parents));
-      },
+      }
     }, (err, res) => {
-      if (res.source1Mapped !== null) {
-        return callback(res.source1Mapped);
+      let source1Ident = res.source1mCSD.entry[0].resource.identifier.find((ident) => {
+        return ident.system === 'https://vims.moh.go.tz' && ident.type.text === 'id'
+      })
+      if(!source1Ident) {
+        winston.error("Source1 identifier is missing")
+        return callback(true)
       }
-      if (res.source2Mapped !== null) {
-        return callback(res.source2Mapped);
+      let source1IdentID = source1Ident.value
+      // Handle match comments
+      const matchComments = [];
+      if (res.source2mCSD.entry.length === 0) {
+        winston.error('source2 mcsd has returned empty results, cant save match');
+        return callback(true);
+      }
+      if (res.source1mCSD.entry.length === 0) {
+        winston.error('source1 mcsd has returned empty results, cant save match');
+        return callback(true);
+      }
+      // if (recoLevel == totalLevels) {
+        const idEqual = mixin.haveIdInCommon(res.source1mCSD.entry[0].resource.identifier, res.source2mCSD.entry[0].resource.identifier);
+        if (!idEqual) {
+          matchComments.push('ID differ');
+        }
+      // }
+      // End of handling match comments
+      let exists = res.source2mCSD.entry[0].resource.identifier && res.source2mCSD.entry[0].resource.identifier.find((ident) => {
+        return ident.system === 'identifierSystem'
+      })
+      if(exists) {
+        winston.error('Already mapped, cant do anything with this request')
+        return callback(true)
+      }
+      let source1Modified = false
+      for(let index in res.source1mCSD.entry[0].resource.extension) {
+        let ext = res.source1mCSD.entry[0].resource.extension[index]
+        if(ext.url === 'https://digitalhealth.intrahealth.org/flag') {
+          res.source1mCSD.entry[0].resource.extension.splice(index, 1)
+          source1Modified = true
+        }
+      }
+      for(let index in res.source1mCSD.entry[0].resource.extension) {
+        let ext = res.source1mCSD.entry[0].resource.extension[index]
+        if(ext.url === 'matchBroken') {
+          res.source1mCSD.entry[0].resource.extension.splice(index, 1)
+          source1Modified = true
+        }
       }
 
-      if (Array.isArray(res.source1Parents)) {
-        res.source1Parents.splice(0, 1);
+      if(!res.source2mCSD.entry[0].resource.identifier) {
+        res.source2mCSD.entry[0].resource.identifier = []
       }
-      if (Array.isArray(res.source2Parents)) {
-        res.source2Parents.splice(0, 1);
-      }
-
-      this.getLocationByID(mappingDB, res.source1Parents[0], false, (mapped1) => {
-        if (!isJSON(JSON.stringify(mapped1))) {
-          winston.error(`Non JSON results returned ${JSON.stringify(mapped1)}`);
-          return callback(true, false);
+      res.source2mCSD.entry[0].resource.identifier.push({
+        type: {
+          text: 'id'
+        },
+        system: identifierSystem,
+        value: source1IdentID,
+        assigner: {
+          display: identifierSystem
         }
-        if (mapped1.entry.length > 0) {
-          res.source1Parents[0] = mixin.getIdFromIdentifiers(mapped1.entry[0].resource.identifier, 'https://digitalhealth.intrahealth.org/source2');
-        }
-        // Handle match comments
-        const matchComments = [];
-        if (!res.source2Parents.includes(res.source1Parents[0])) {
-          matchComments.push('Parents differ');
-        }
-        if (res.source2mCSD.entry.length === 0) {
-          winston.error('source2 mcsd has returned empty results, cant save match');
-          return callback(true);
-        }
-        if (res.source1mCSD.entry.length === 0) {
-          winston.error('source1 mcsd has returned empty results, cant save match');
-          return callback(true);
-        }
-        const source1Name = res.source2mCSD.entry[0].resource.name;
-        const source2Name = res.source1mCSD.entry[0].resource.name;
-        const lev = levenshtein.get(source2Name.toLowerCase(), source1Name.toLowerCase());
-        if (lev !== 0) {
-          matchComments.push('Names differ');
-        }
-        if (recoLevel == totalLevels) {
-          const idEqual = mixin.haveIdInCommon(res.source1mCSD.entry[0].resource.identifier, res.source2mCSD.entry[0].resource.identifier);
-          if (!idEqual) {
-            matchComments.push('ID differ');
-          }
-          let source2Latitude = null;
-          let source2Longitude = null;
-          let source1Latitude = null;
-          let source1Longitude = null;
-          if (res.source1mCSD.entry[0].resource.hasOwnProperty('position')) {
-            source2Latitude = res.source1mCSD.entry[0].resource.position.latitude;
-            source2Longitude = res.source1mCSD.entry[0].resource.position.longitude;
-          }
-          if (res.source2mCSD.entry[0].resource.hasOwnProperty('position')) {
-            source1Latitude = res.source2mCSD.entry[0].resource.position.latitude;
-            source1Longitude = res.source2mCSD.entry[0].resource.position.longitude;
-          }
-          if (source2Latitude && source2Longitude) {
-            const dist = geodist({
-              source2Latitude,
-              source2Longitude,
-            }, {
-              source1Latitude,
-              source1Longitude,
-            }, {
-              exact: false,
-              unit: 'miles',
+      })
+      async.parallel([
+        (callback) => {
+          if(source1Modified) {
+            const fhir1 = {};
+            fhir1.entry = [];
+            fhir1.type = 'batch';
+            fhir1.resourceType = 'Bundle';
+            fhir1.entry.push({
+              resource: res.source1mCSD.entry[0].resource,
+              request: {
+                method: 'PUT',
+                url: `Location/${res.source1mCSD.entry[0].resource.id}`,
+              }
+            })
+            me.saveLocations(fhir1, source1DB, (err, res) => {
+              winston.info("Done saving match")
+              if (err) {
+                winston.error(err);
+              }
+              return callback(null);
             });
-            if (dist !== 0) {
-              matchComments.push('Coordinates differ');
-            }
           } else {
-            matchComments.push('Coordinates missing');
+            return callback(null)
           }
-        }
-        // End of handling match comments
-
-        const fhir = {};
-        fhir.entry = [];
-        fhir.type = 'batch';
-        fhir.resourceType = 'Bundle';
-        const entry = [];
-        const resource = {};
-        resource.resourceType = 'Location';
-        resource.name = res.source1mCSD.entry[0].resource.name; // take source 2 name
-        resource.alias = res.source2mCSD.entry[0].resource.name; // take source1 name
-        resource.id = source1Id;
-        resource.identifier = [];
-        const source2URL = URI(config.getConf('mCSD:url')).segment(source2DB).segment('fhir').segment('Location')
-          .segment(source2Id)
-          .toString();
-        const source1URL = URI(config.getConf('mCSD:url')).segment(source1DB).segment('fhir').segment('Location')
-          .segment(source1Id)
-          .toString();
-        resource.identifier.push({
-          system: source2System,
-          value: source2URL,
-        });
-        resource.identifier.push({
-          system: source1System,
-          value: source1URL,
-        });
-
-        if (res.source1mCSD.entry[0].resource.hasOwnProperty('partOf')) {
-          if (!res.source1mCSD.entry[0].resource.partOf.reference.includes(fakeOrgId)) {
-            resource.partOf = {
-              display: res.source1mCSD.entry[0].resource.partOf.display,
-              reference: res.source1mCSD.entry[0].resource.partOf.reference,
-            };
-          }
-        }
-        if (recoLevel == totalLevels) {
-          var typeCode = 'bu';
-          var typeName = 'building';
-        } else {
-          var typeCode = 'jdn';
-          var typeName = 'Jurisdiction';
-        }
-        resource.physicalType = {
-          coding: [{
-            code: typeCode,
-            display: typeName,
-            system: 'http://hl7.org/fhir/location-physical-type',
-          }],
-        };
-        if (!resource.meta) {
-          resource.meta = {};
-        }
-        if (!resource.meta.tag) {
-          resource.meta.tag = [];
-        }
-        if (matchComments.length > 0) {
-          resource.meta.tag.push({
-            system: source2System,
-            code: matchCommentsCode,
-            display: matchComments,
+        },
+        (callback) => {
+          const fhir2 = {};
+          fhir2.entry = [];
+          fhir2.type = 'batch';
+          fhir2.resourceType = 'Bundle';
+          fhir2.entry.push({
+            resource: res.source2mCSD.entry[0].resource,
+            request: {
+              method: 'PUT',
+              url: `Location/${res.source2mCSD.entry[0].resource.id}`,
+            }
+          })
+          me.saveLocations(fhir2, source2DB, (err, res) => {
+            winston.info("Done saving match")
+            if (err) {
+              winston.error(err);
+            }
+            return callback(null);
           });
         }
-        if (type == 'flag') {
-          if (flagComment) {
-            resource.meta.tag.push({
-              system: source2System,
-              code: flagCommentCode,
-              display: flagComment,
-            });
-          }
-          resource.meta.tag.push({
-            system: source2System,
-            code: flagCode,
-            display: 'To be reviewed',
-          });
-        }
-        if (autoMatch) {
-          resource.meta.tag.push({
-            system: source2System,
-            code: autoMatchedCode,
-            display: 'Automatically Matched',
-          });
-        } else {
-          resource.meta.tag.push({
-            system: source2System,
-            code: manualllyMatchedCode,
-            display: 'Manually Matched',
-          });
-        }
-        entry.push({
-          resource,
-          request: {
-            method: 'PUT',
-            url: `Location/${resource.id}`,
-          },
-        });
-        fhir.entry = fhir.entry.concat(entry);
-        me.saveLocations(fhir, mappingDB, (err, res) => {
-          if (err) {
-            winston.error(err);
-          }
-          callback(err, matchComments);
-        });
-      });
+      ], () => {
+        callback(false, matchComments)
+      })
     });
   },
   acceptFlag(source1Id, mappingDB, callback) {
@@ -2449,71 +2466,75 @@ module.exports = () => ({
       });
     });
   },
-  breakMatch(source1Id, mappingDB, source1DB, callback) {
-    if (!source1Id) {
+  breakMatch(source1Id, source2Id, source1DB, callback) {
+    if (!source1Id || !source2Id || !source1DB) {
+      winston.error("Important informations are missing, cant break match")
       return callback(true, false);
     }
-    const url_prefix = URI(config.getConf('mCSD:url'))
-      .segment(mappingDB)
-      .segment('fhir')
-      .segment('Location');
-    const url = URI(url_prefix).segment(source1Id).toString();
-    const options = {
-      url,
-    };
-    this.getLocationByID(source1DB, source1Id, false, (location) => {
-      if (location.entry.length === 0) {
-        return callback(true, null);
-      }
-      request.delete(options, (err, res, body) => {
-        this.cleanCache(url_prefix.toString());
-        if (res.statusCode === 409) {
-          return callback('Can not break this match as there are other matches that are child of this', null);
-        }
-        if (err) {
-          return callback('Un expected error has occured, match was not broken', null);
-        }
-        delete location.resourceType;
-        delete location.id;
-        delete location.meta;
-        delete location.total;
-        delete location.link;
-        const matchBrokenCode = config.getConf('mapping:matchBrokenCode');
-        // remove the flag tag
-        let found = false;
-        async.eachSeries(location.entry[0].resource.meta.tag, (tag, nxtTag) => {
-          if (tag.code === matchBrokenCode) {
-            found = true;
+    async.parallel({
+      source1: (callback) => {
+        this.getLocationByID(source1DB, source1Id, false, (location) => {
+          if(location.entry.length === 0) {
+            winston.error("Cant break match as the location in source 1 was not found")
+            return callback(null)
           }
-          return nxtTag();
-        }, () => {
-          location.resourceType = 'Bundle';
-          location.type = 'batch';
-          if (!found) {
-            const source1System = 'https://digitalhealth.intrahealth.org/source1';
-            if (!location.entry[0].resource.meta) {
-              location.entry[0].resource.meta = {};
-            }
-            if (!location.entry[0].resource.meta.tag) {
-              location.entry[0].resource.meta.tag = [];
-            }
-            location.entry[0].resource.meta.tag.push({
-              system: source1System,
-              code: matchBrokenCode,
-              display: 'Match Broken',
-            });
+          if(!location.entry[0].resource.extension) {
+            location.entry[0].resource.extension = []
+          }
+          let matchBrokenExist = location.entry[0].resource.extension.find((ext) => {
+            return ext.url === 'matchBroken'
+          })
+
+          if (!matchBrokenExist) {
+            location.entry[0].resource.extension.push({
+              url: 'matchBroken',
+              valueBoolean: true
+            })
+            location.resourceType = 'Bundle';
+            location.type = 'batch';
             location.entry[0].request = {};
             location.entry[0].request.method = 'PUT';
             location.entry[0].request.url = `Location/${location.entry[0].resource.id}`;
             this.saveLocations(location, source1DB, (err, res) => {
-              callback(err, null);
+              return callback(null)
             });
           } else {
-            callback(err, null);
+            callback(null);
           }
-        });
-      });
-    });
+        })
+      },
+      source2: (callback) => {
+        let source2DB = config.getConf("hfr:tenancyid")
+        let identifierSystem
+        if(config.getConf("vims:tenancyid") === source1DB) {
+          identifierSystem = 'https://vims.moh.go.tz'
+        } else if(config.getConf("dhis2:tenancyid") === source1DB) {
+          identifierSystem = 'tanzania-hmis'
+        }
+        this.getLocationByID(source2DB, source2Id, false, (location) => {
+          if(location.entry.length === 0) {
+            winston.error("Cant break match as the location in source 1 was not found")
+            return callback(null)
+          }
+          for(let index in location.entry[0].resource.identifier) {
+            let ident = location.entry[0].resource.identifier[index]
+            if(ident.system === identifierSystem) {
+              location.entry[0].resource.identifier.splice(index, 1)
+            }
+          }
+          location.resourceType = 'Bundle';
+          location.type = 'batch';
+          location.entry[0].request = {};
+          location.entry[0].request.method = 'PUT';
+          location.entry[0].request.url = `Location/${location.entry[0].resource.id}`;
+          this.saveLocations(location, source2DB, (err, res) => {
+            return callback(null)
+          });
+        })
+      }
+    }, () => {
+      return callback()
+    })
   },
   breakNoMatch(source1Id, mappingDB, callback) {
     const url_prefix = URI(config.getConf('mCSD:url'))

@@ -15,6 +15,7 @@ const http = require('http');
 const os = require('os');
 const fs = require('fs');
 const request = require('request');
+const axios = require('axios')
 const Cryptr = require('cryptr');
 const fsFinder = require('fs-finder');
 const bcrypt = require('bcrypt');
@@ -40,12 +41,16 @@ const mongo = require('./mongo')();
 const config = require('./config');
 const FRRouter = require('./routes/facilityRegistry');
 const openinfoman = require('./routes/openinfoman');
+const vims = require('./routes/vims');
 const mcsd = require('./mcsd')();
 const dhis = require('./dhis')();
 const fhir = require('./fhir')();
 const hapi = require('./hapi');
 const scores = require('./scores')();
+const es = require('./es');
 const defaultSetups = require('./defaultSetup.js');
+const { query } = require('../../../fhir2es/winston');
+const { match } = require('assert');
 
 const mongoUser = config.getConf('DB_USER');
 const mongoPasswd = config.getConf('DB_PASSWORD');
@@ -76,6 +81,8 @@ const jwtValidator = function (req, res, next) {
     || req.path.startsWith('/static/img')
     || req.path.startsWith('/FR')
     || req.path.startsWith('/OIM')
+    || req.path.startsWith('/VIMS')
+    || req.path.startsWith('/es')
     || req.path.startsWith('/favicon.ico')
   ) {
     return next();
@@ -127,6 +134,7 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 app.use('/FR/', FRRouter);
 app.use('/OIM/', openinfoman);
+app.use('/VIMS/', vims);
 // socket config - large documents can cause machine to max files open
 
 https.globalAgent.maxSockets = 32;
@@ -164,6 +172,7 @@ if (cluster.isMaster) {
             name: 'Admin',
           }, (err, data) => {
             const User = new models.UsersModel({
+              _id: '5dd2b3a0064c5303fe0bcb4c',
               firstName: 'Root',
               surname: 'Root',
               userName: 'root@gofr.org',
@@ -185,6 +194,39 @@ if (cluster.isMaster) {
         });
       }
     });
+
+    winston.info('Adding default data sources')
+    let dataSources = [{
+      name: 'vims',
+      host: '',
+      sourceType: 'upload',
+      source: 'vims',
+      userID: '5dd2b3a0064c5303fe0bcb4c',
+      shareToAll: true,
+      username: '',
+      password: ''
+    }, {
+      name: 'hfr',
+      host: '',
+      sourceType: 'upload',
+      source: 'hfr',
+      userID: '5dd2b3a0064c5303fe0bcb4c',
+      shareToAll: true,
+      username: '',
+      password: ''
+    }]
+    for(let datasource of dataSources) {
+      mongo.addDataSource(datasource, (err, response) => {
+        if (err) {
+          winston.error(err);
+        } else {
+          winston.info('Default data source saved successfully');
+        }
+      });
+    }
+
+    //create ES HFR index
+    es.createESIndex('hfrfacilities', ['id', 'code', 'uuid'], [{name: 'name', type: 'text'}], () => {})
 
     // check if FR DB Exists
     const defaultDB = config.getConf('hapi:defaultDBName');
@@ -229,6 +271,7 @@ if (cluster.isMaster) {
         // check if FR has fake org id
         createFakeOrgID(requestsDB);
         createFakeOrgID(defaultDB);
+        createFakeOrgID('vims');
       }
     });
 
@@ -326,10 +369,10 @@ if (cluster.isMaster) {
     const mappingDB = config.getConf('mapping:dbPrefix') + req.params.db;
     async.parallel({
       source1Data(callback) {
-        mcsd.getLocations(source1DB, data => callback(false, data));
+        mcsd.getLocations(source1DB, data => callback(null, data));
       },
       mappingData(callback) {
-        mcsd.getLocations(mappingDB, data => callback(false, data));
+        mcsd.getLocations(mappingDB, data => callback(null, data));
       },
     }, (err, results) => {
       const dupplicated = [];
@@ -1179,8 +1222,6 @@ if (cluster.isMaster) {
   app.get('/countLevels/:source1/:source2/:sourcesOwner/:sourcesLimitOrgId', (req, res) => {
     winston.info('Received a request to get total levels');
     const sourcesOwner = JSON.parse(req.params.sourcesOwner);
-    const source1Owner = sourcesOwner.source1Owner;
-    const source2Owner = sourcesOwner.source2Owner;
     const sourcesLimitOrgId = JSON.parse(req.params.sourcesLimitOrgId);
     let source1LimitOrgId = sourcesLimitOrgId.source1LimitOrgId;
     let source2LimitOrgId = sourcesLimitOrgId.source2LimitOrgId;
@@ -1191,19 +1232,19 @@ if (cluster.isMaster) {
     if (!source2LimitOrgId) {
       source2LimitOrgId = topOrgId;
     }
-    const source1 = req.params.source1 + source1Owner;
-    const source2 = req.params.source2 + source2Owner;
+    const source1 = req.params.source1;
+    const source2 = req.params.source2;
     async.parallel({
       Source1Levels(callback) {
         mcsd.countLevels(source1, source1LimitOrgId, (err, source1TotalLevels) => {
           winston.info(`Received total source1 levels of ${source1TotalLevels}`);
-          return callback(err, source1TotalLevels);
+          return callback(null, source1TotalLevels);
         });
       },
       Source2Levels(callback) {
         mcsd.countLevels(source2, source2LimitOrgId, (err, source2TotalLevels) => {
           winston.info(`Received total source2 levels of ${source2TotalLevels}`);
-          return callback(err, source2TotalLevels);
+          return callback(null, source2TotalLevels);
         });
       },
       getLevelMapping(callback) {
@@ -1224,7 +1265,7 @@ if (cluster.isMaster) {
                   }
                 }
               }
-              return callback(false, levelMapping);
+              return callback(null, levelMapping);
             });
           },
           levelMapping2(callback) {
@@ -1243,10 +1284,12 @@ if (cluster.isMaster) {
                   }
                 }
               }
-              return callback(false, levelMapping);
+              return callback(null, levelMapping);
             });
           },
-        }, (err, mappings) => callback(false, mappings));
+        }, (err, mappings) => {
+          callback(null, mappings)
+        });
       },
     }, (err, results) => {
       if (err) {
@@ -1282,8 +1325,7 @@ if (cluster.isMaster) {
   });
 
   app.get('/getLevelData/:source/:sourceOwner/:level', (req, res) => {
-    const sourceOwner = req.params.sourceOwner;
-    const db = req.params.source + sourceOwner;
+    const db = req.params.source
     const level = req.params.level;
     const levelData = [];
     mcsd.getLocations(db, (mcsdData) => {
@@ -1304,7 +1346,7 @@ if (cluster.isMaster) {
   app.post('/editLocation', (req, res) => {
     const form = new formidable.IncomingForm();
     form.parse(req, (err, fields, files) => {
-      const db = fields.source + fields.sourceOwner;
+      const db = fields.source
       const id = fields.locationId;
       const name = fields.locationName;
       const parent = fields.locationParent;
@@ -1345,27 +1387,31 @@ if (cluster.isMaster) {
         error: 'Missing Orgid',
       });
     } else {
-      const source1Owner = req.params.source1Owner;
-      const source2Owner = req.params.source2Owner;
-      const source1 = req.params.source1 + source1Owner;
-      const source2 = req.params.source2 + source2Owner;
+      const source1 = req.params.source1;
+      const source2 = req.params.source2;
+      let esindex1
+      if(config.getConf("vims:tenancyid") === source1) {
+        esindex1 = 'vimsfacilities'
+      } else if(config.getConf("dhis2:tenancyid") === source1) {
+        esindex1 = 'dhis2facilities'
+      }
       winston.info(`Checking if data available for ${source1} and ${source2}`);
       async.parallel({
         source1Availability(callback) {
-          mcsd.getLocations(source1, (source1Data) => {
-            if (source1Data.hasOwnProperty('entry') && source1Data.entry.length > 0) {
-              return callback(false, true);
+          es.getDocument({index: esindex1}, (err, documents) => {
+            if(documents.length > 0) {
+              return callback(null, true);
             }
-            return callback(false, false);
-          });
+            return callback(null, false);
+          })
         },
         source2Availability(callback) {
-          mcsd.getLocations(source2, (source2Data) => {
-            if (source2Data.hasOwnProperty('entry') && source2Data.entry.length > 0) {
-              return callback(false, true);
+          es.getDocument({index: 'hfrfacilities'}, (err, documents) => {
+            if(documents.length > 0) {
+              return callback(null, true);
             }
-            return callback(false, false);
-          });
+            return callback(null, false);
+          })
         },
       }, (error, results) => {
         if (results.source1Availability && results.source2Availability) {
@@ -1619,14 +1665,14 @@ if (cluster.isMaster) {
             parent: sourceLimitOrgId,
           }, (mcsdData) => {
             winston.info(`Done Fetching Locations For ${source}`);
-            return callback(false, mcsdData);
+            return callback(null, mcsdData);
           });
         },
         parentDetails(callback) {
           if (sourceLimitOrgId === topOrgId) {
-            return callback(false, false);
+            return callback(null, false);
           }
-          mcsd.getLocationByID(db, sourceLimitOrgId, false, details => callback(false, details));
+          mcsd.getLocationByID(db, sourceLimitOrgId, false, details => callback(null, details));
         },
       }, (error, response) => {
         winston.info(`Creating ${source} Tree`);
@@ -1724,6 +1770,313 @@ if (cluster.isMaster) {
     });
   });
 
+  app.get('/esreconcile', (req, res) => {
+    res.status(200).send();
+    winston.info('Calculating Scores')
+    const {
+      clientId,
+      source1
+    } = req.query;
+    let esindex1
+    let source1Tenancy
+    let mappingColumn
+    const scoreRequestId = `scoreResults${clientId}`;
+    let scoreResData = JSON.stringify({
+      status: 'Running Automatching and Calculating scores',
+      error: null,
+      percent: null,
+    });
+    redisClient.set(scoreRequestId, scoreResData);
+    if(config.getConf("vims:tenancyid") === source1) {
+      source1Tenancy = config.getConf("vims:tenancyid")
+      esindex1 = 'vimsfacilities'
+      mappingColumn = 'vims'
+    } else if(config.getConf("dhis2:tenancyid") === source1) {
+      source1Tenancy = config.getConf("dhis2:tenancyid")
+      esindex1 = 'dhis2facilities'
+      mappingColumn = 'dhis2'
+    }
+    let scoreResults = []
+    let totalRecords
+    let totalAllMapped = 0
+    let totalAllFlagged = 0
+    es.getDocument({index: esindex1}, (err, documents) => {
+      totalRecords = documents.length
+      winston.info("Calculating scores of " + documents.length + " facilities")
+      updateDataSavingPercent('initialize')
+      async.eachSeries(documents, (document, nxtDoc) => {
+        let thisRanking = {
+          potentialMatches: {},
+          exactMatch: {}
+        }
+        let parents = []
+        if(mappingColumn === 'vims') {
+          parents = [document._source.zone]
+        }
+        thisRanking.source1 = {
+          name: document._source.name,
+          id: document._source.id,
+          code: document._source.code,
+          uuid: document._source.uuid.split('Location/')[1],
+          parents
+        }
+        if(document._source.flaggedTo) {
+          thisRanking.source1.tag = 'flagged'
+          thisRanking.source1.flagComment = document._source.flagComment
+        }
+        let automatched = false
+        async.parallel({
+          flagged: (callback) => {
+            if(!document._source.flaggedTo) {
+              return callback(null)
+            }
+            totalAllFlagged++
+            let query = {
+              query: {
+                match: {
+                  id: document._source.flaggedTo
+                }
+              }
+            }
+            es.getDocument({index: 'hfrfacilities', query}, (err, hfrfacilities) => {
+              if(hfrfacilities.length === 0) {
+                return callback(null)
+              }
+              thisRanking.exactMatch = {
+                name: hfrfacilities[0]._source.name,
+                id: hfrfacilities[0]._source.id,
+                code: hfrfacilities[0]._source.code,
+                uuid: hfrfacilities[0]._source.uuid.split('Location/')[1],
+                parents: getParents(hfrfacilities[0])
+              }
+              return callback()
+            })
+          },
+          automatch: (callback) => {
+            if(!document._source.code || document._source.matchBroken || document._source.flaggedTo) {
+              return callback(null)
+            }
+            let query = {
+              query: {
+                bool: {
+                  should: [
+                    {
+                      match: {
+                        "code.keyword": document._source.code
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+            let match = {
+              match: {}
+            }
+            match.match[`${mappingColumn}.keyword`] = document._source.id
+            query.query.bool.should.push(match)
+            es.getDocument({index: 'hfrfacilities', query}, (err, hfrfacilities) => {
+              if(hfrfacilities.length === 1) {
+                let parents = getParents(hfrfacilities[0])
+                automatched = true
+                totalAllMapped++
+                thisRanking.exactMatch = {
+                  name: hfrfacilities[0]._source.name,
+                  id: hfrfacilities[0]._source.id,
+                  code: hfrfacilities[0]._source.code,
+                  uuid: hfrfacilities[0]._source.uuid.split('Location/')[1],
+                  parents
+                }
+                if(hfrfacilities[0]['_source'][mappingColumn]) {
+                  return callback(null)
+                } else {
+                  mcsd.saveMatch(
+                    document._source.uuid.split('Location/')[1],
+                    hfrfacilities[0]._source.uuid.split('Location/')[1],
+                    source1Tenancy,
+                    () => {
+                      return callback(null)
+                    }
+                  )
+                }
+              } else if(hfrfacilities.length > 1) {
+                winston.error(JSON.stringify(query,0,2));
+                winston.error('Multiple matches found for ' + document._source.name);
+                winston.error(JSON.stringify(hfrfacilities,0,2));
+                return callback(null)
+              } else {
+                return callback(null)
+              }
+            })
+          },
+          potentialMatches: (callback) => {
+            if(document._source.flaggedTo) {
+              return callback(null)
+            }
+            let query = {
+              query: {
+                fuzzy: {
+                  name: {
+                    value: document._source.name,
+                    fuzziness: 2
+                  }
+                }
+              }
+            }
+            es.getDocument({index: 'hfrfacilities', query}, (err, hfrfacilities) => {
+              for(let fac of hfrfacilities) {
+                if(!Array.isArray(thisRanking.potentialMatches[fac._score])) {
+                  thisRanking.potentialMatches[fac._score] = []
+                }
+                thisRanking.potentialMatches[fac._score].push({
+                  name: fac._source.name,
+                  id: fac._source.id,
+                  code: fac._source.code,
+                  uuid: fac._source.uuid.split('Location/')[1],
+                  parents: getParents(fac)
+                })
+              }
+              return callback(null)
+            })
+          }
+        }, () => {
+          if(automatched) {
+            thisRanking.potentialMatches = {}
+          }
+          scoreResults.push(thisRanking)
+          updateDataSavingPercent()
+          return nxtDoc()
+        })
+      }, () => {
+        let source2Unmatched = []
+        let source2TotalRecords
+        async.parallel({
+          getUnmatched: (callback) => {
+            let query = {
+              query: {
+                bool: {
+                  must: [
+                    {
+                      script: {
+                        script: {
+                          source: `if(doc['${mappingColumn}.keyword'].size() == 0){return true}`,
+                          lang: "painless"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+            es.getDocument({index: 'hfrfacilities', query}, (err, hfrfacilities) => {
+              for(let fac of hfrfacilities) {
+                source2Unmatched.push({
+                  id: fac._source.id,
+                  code: fac._source.code,
+                  name: fac._source.name,
+                  uuid: fac._source.uuid.split('Location/')[1],
+                  parents: getParents(fac)
+                })
+              }
+              return callback(null)
+            })
+          },
+          countSource2: (callback) => {
+            let url = URI(config.getConf('elastic:server'))
+            .segment('hfrfacilities')
+            .segment('_count')
+            .toString()
+            axios({
+              method: 'GET',
+              url,
+              auth: {
+                username: config.getConf('elastic:username'),
+                password: config.getConf('elastic.password'),
+              }
+            }).then((response) => {
+              source2TotalRecords = response.data.count
+              return callback(null)
+            }).catch((err) => {
+              winston.error(err)
+              return callback(null)
+            })
+          }
+        }, () => {
+          const responseData = {
+            scoreResults,
+            source2Unmatched,
+            source2TotalRecords: source2TotalRecords,
+            source2TotalAllRecords: source2TotalRecords,
+            totalAllMapped,
+            totalAllFlagged,
+            // totalAllNoMatch,
+            // totalAllIgnored,
+            // source1TotalAllNotMapped,
+            source1TotalAllRecords: documents.length
+          };
+          winston.info('Done calculating scores')
+          scoreResData = JSON.stringify({
+            status: 'Done',
+            error: null,
+            percent: 100,
+            responseData,
+            stage: 'last',
+          });
+          redisClient.set(scoreRequestId, scoreResData);
+
+          const scoreSavingStatId = `scoreSavingStatus${clientId}`;
+          const scoreSavingData = JSON.stringify({
+            status: '1/1 - Saving Data',
+            error: null,
+            percent: 100,
+          });
+          redisClient.set(scoreSavingStatId, scoreSavingData);
+          winston.info('Score results sent back');
+        })
+      })
+    })
+
+    function updateDataSavingPercent(status) {
+      if (status == 'initialize') {
+        countSaved = 0;
+      } else if (status == 'done') {
+        countSaved = totalRecords;
+      } else {
+        countSaved += 1;
+      }
+      const percent = parseFloat((countSaved * 100 / totalRecords).toFixed(2));
+      const scoreSavingData = JSON.stringify({
+        status: 'Running Automatching and Calculating scores',
+        error: null,
+        percent,
+      });
+      redisClient.set(scoreRequestId, scoreSavingData);
+    }
+
+    function getParents(facility) {
+      let parents = []
+      if(facility['_source'].villagename) {
+        parents.push(facility['_source'].villagename)
+      }
+      if(facility['_source'].wardname) {
+        parents.push(facility['_source'].wardname)
+      }
+      if(facility['_source'].councilname) {
+        parents.push(facility['_source'].councilname)
+      }
+      // if(facility['_source'].districtname) {
+      //   parents.push(facility['_source'].districtname)
+      // }
+      // if(facility['_source'].regionname) {
+      //   parents.push(facility['_source'].regionname)
+      // }
+      // if(facility['_source'].zonename) {
+      //   parents.push(facility['_source'].zonename)
+      // }
+      return parents
+    }
+
+  })
+
   app.get('/reconcile', (req, res) => {
     const {
       totalSource1Levels,
@@ -1732,9 +2085,7 @@ if (cluster.isMaster) {
       clientId,
       userID,
       source1,
-      source2,
-      source1Owner,
-      source2Owner,
+      source2
     } = req.query;
     let {
       source1LimitOrgId,
@@ -1783,7 +2134,7 @@ if (cluster.isMaster) {
       redisClient.set(scoreRequestId, scoreResData);
       async.parallel({
         source2Locations(callback) {
-          const dbSource2 = source2 + source2Owner;
+          const dbSource2 = source2;
           mcsd.getLocationChildren({
             database: dbSource2,
             parent: source2LimitOrgId,
@@ -1799,26 +2150,26 @@ if (cluster.isMaster) {
             if (levelMaps[orgid] && levelMaps[orgid][recoLevel]) {
               level = levelMaps[orgid][recoLevel];
             }
-            mcsd.filterLocations(mcsdSource2, source2LimitOrgId, level, mcsdSource2Level => callback(false, mcsdSource2Level));
+            mcsd.filterLocations(mcsdSource2, source2LimitOrgId, level, mcsdSource2Level => callback(null, mcsdSource2Level));
           });
         },
         source1Loations(callback) {
-          const dbSource1 = source1 + source1Owner;
+          const dbSource1 = source1;
           mcsd.getLocationChildren({
             database: dbSource1,
             parent: source1LimitOrgId,
           }, (mcsdSource1) => {
             mcsdSource1All = mcsdSource1;
-            mcsd.filterLocations(mcsdSource1, source1LimitOrgId, recoLevel, mcsdSource1Level => callback(false, mcsdSource1Level));
+            mcsd.filterLocations(mcsdSource1, source1LimitOrgId, recoLevel, mcsdSource1Level => callback(null, mcsdSource1Level));
           });
         },
         mappingData(callback) {
           const mappingDB = source1 + userID + source2;
-          mcsd.getLocations(mappingDB, mcsdMapped => callback(false, mcsdMapped));
+          mcsd.getLocations(mappingDB, mcsdMapped => callback(null, mcsdMapped));
         },
       }, (error, results) => {
-        const source1DB = source1 + source1Owner;
-        const source2DB = source2 + source2Owner;
+        const source1DB = source1;
+        const source2DB = source2;
         const mappingDB = source1 + userID + source2;
         if (recoLevel == totalSource1Levels) {
           scores.getBuildingsScores(
@@ -2328,7 +2679,7 @@ if (cluster.isMaster) {
                   return nxtLevel();
                 });
               });
-            }, () => callback(false, unmatchedSource1CSV));
+            }, () => callback(null, unmatchedSource1CSV));
           },
           source2(callback) {
             async.each(levelsArr2, (srcLevel, nxtLevel) => {
@@ -2372,7 +2723,7 @@ if (cluster.isMaster) {
                   return nxtLevel();
                 });
               });
-            }, () => callback(false, unmatchedSource2CSV));
+            }, () => callback(null, unmatchedSource2CSV));
           },
         }, (error, response) => res.status(200).send({
           unmatchedSource1CSV: response.source1,
@@ -2382,35 +2733,52 @@ if (cluster.isMaster) {
     }
   });
 
-  app.post('/match/:type', (req, res) => {
-    winston.info('Received data for matching');
-    const {
-      type,
-    } = req.params;
+  app.post('/flag', (req, res) => {
+    winston.info('Received a request to add flag')
     const form = new formidable.IncomingForm();
     form.parse(req, (err, fields, files) => {
-      if (!fields.source1DB || !fields.source2DB) {
+      mcsd.flag(fields.source1Id, fields.source2Id, fields.source1DB, fields.flagComment, (err) => {
+        winston.info('Done adding flag')
+        if(err) {
+          return res.status(500).send()
+        }
+        res.send()
+      })
+    })
+  })
+
+  app.post('/unflag', (req, res) => {
+    winston.info('Received a request to remove flag')
+    const form = new formidable.IncomingForm();
+    form.parse(req, (err, fields, files) => {
+      mcsd.unflag(fields.source1Id, fields.source1DB, (err) => {
+        winston.info('Done removing flag')
+        if(err) {
+          return res.status(500).send()
+        }
+        res.send()
+      })
+    })
+  })
+
+  app.post('/match', (req, res) => {
+    winston.info('Received data for matching');
+    const form = new formidable.IncomingForm();
+    form.parse(req, (err, fields, files) => {
+      if (!fields.source1DB || !fields.source1Id || !fields.source2Id) {
         winston.error({
-          error: 'Missing Source1 or Source2',
+          error: 'Missing Source1DB or Source1Id or source2Id',
         });
         res.status(400).json({
-          error: 'Missing Source1 or Source2',
+          error: 'Missing Source1DB or Source1Id or source2Id',
         });
         return;
       }
       const {
         source1Id,
         source2Id,
-        recoLevel,
-        totalLevels,
-        userID,
-        source1Owner,
-        source2Owner,
-        flagComment,
+        source1DB
       } = fields;
-      const source1DB = fields.source1DB + source1Owner;
-      const source2DB = fields.source2DB + source2Owner;
-      const mappingDB = fields.source1DB + userID + fields.source2DB;
       if (!source1Id || !source2Id) {
         winston.error({
           error: 'Missing either Source1 ID or Source2 ID or both',
@@ -2420,41 +2788,18 @@ if (cluster.isMaster) {
         });
         return;
       }
-      let uri;
-      if (mongoUser && mongoPasswd) {
-        uri = `mongodb://${mongoUser}:${mongoPasswd}@${mongoHost}:${mongoPort}/${mappingDB}`;
-      } else {
-        uri = `mongodb://${mongoHost}:${mongoPort}/${mappingDB}`;
-      }
-      const connection = mongoose.createConnection(uri, {
-        useNewUrlParser: true,
-      });
-      connection.on('error', () => {
-        winston.error(`An error occured while connecting to DB ${mappingDB}`);
-      });
-      connection.once('open', () => {
-        connection.model('MetaData', schemas.MetaData).findOne({}, (err, data) => {
-          connection.close();
-          if (data && data.recoStatus === 'in-progress') {
-            mcsd.saveMatch(source1Id, source2Id, source1DB, source2DB, mappingDB, recoLevel, totalLevels, type, false, flagComment, (err, matchComments) => {
-              winston.info('Done matching');
-              if (err) {
-                winston.error(err);
-                res.status(400).send({
-                  error: err,
-                });
-              } else {
-                res.status(200).json({
-                  matchComments,
-                });
-              }
-            });
-          } else {
-            res.status(400).send({
-              error: 'Reconciliation closed',
-            });
-          }
-        });
+      mcsd.saveMatch(source1Id, source2Id, source1DB, (err, matchComments) => {
+        winston.info('Done matching');
+        if (err) {
+          winston.error(err);
+          res.status(400).send({
+            error: err,
+          });
+        } else {
+          res.status(200).json({
+            matchComments,
+          });
+        }
       });
     });
   });
@@ -2597,57 +2942,22 @@ if (cluster.isMaster) {
     });
   });
 
-  app.post('/breakMatch/:source1/:source2/:source1Owner/:source2Owner/:userID', (req, res) => {
-    if (!req.params.source1) {
-      winston.error({
-        error: 'Missing Source1',
-      });
-      res.status(400).json({
-        error: 'Missing Source1',
-      });
-      return;
-    }
-    const userID = req.params.userID;
-    const source1Owner = req.params.source1Owner;
-    const source1DB = req.params.source1 + source1Owner;
-    const mappingDB = req.params.source1 + userID + req.params.source2;
+  app.post('/breakMatch/:source1', (req, res) => {
+    const source1DB = req.params.source1
     const form = new formidable.IncomingForm();
     form.parse(req, (err, fields, files) => {
       winston.info(`Received break match request for ${fields.source1Id}`);
       const source1Id = fields.source1Id;
-
-      let uri;
-      if (mongoUser && mongoPasswd) {
-        uri = `mongodb://${mongoUser}:${mongoPasswd}@${mongoHost}:${mongoPort}/${mappingDB}`;
-      } else {
-        uri = `mongodb://${mongoHost}:${mongoPort}/${mappingDB}`;
-      }
-      const connection = mongoose.createConnection(uri, {
-        useNewUrlParser: true,
-      });
-      connection.on('error', () => {
-        winston.error(`An error occured while connecting to DB ${mappingDB}`);
-      });
-      connection.once('open', () => {
-        connection.model('MetaData', schemas.MetaData).findOne({}, (err, data) => {
-          connection.close();
-          if (data.recoStatus === 'in-progress') {
-            mcsd.breakMatch(source1Id, mappingDB, source1DB, (err, results) => {
-              if (err) {
-                winston.error(err);
-                return res.status(500).json({
-                  error: err,
-                });
-              }
-              winston.info(`break match done for ${fields.source1Id}`);
-              res.status(200).send(err);
-            });
-          } else {
-            res.status(400).send({
-              error: 'Reconciliation closed',
-            });
-          }
-        });
+      const source2Id = fields.source2Id;
+      mcsd.breakMatch(source1Id, source2Id, source1DB, (err, results) => {
+        if (err) {
+          winston.error(err);
+          return res.status(500).json({
+            error: err,
+          });
+        }
+        winston.info(`break match done for ${fields.source1Id}`);
+        res.status(200).send(err);
       });
     });
   });
@@ -3163,10 +3473,10 @@ if (cluster.isMaster) {
             const db2 = mixin.toTitleCase(JSON.parse(fields.source2).name) + JSON.parse(fields.source2).userID._id;
             async.series({
               levelMapping1(callback) {
-                mongo.getLevelMapping(db1, levelMapping => callback(false, levelMapping));
+                mongo.getLevelMapping(db1, levelMapping => callback(null, levelMapping));
               },
               levelMapping2(callback) {
-                mongo.getLevelMapping(db2, levelMapping => callback(false, levelMapping));
+                mongo.getLevelMapping(db2, levelMapping => callback(null, levelMapping));
               },
             }, (err, mappings) => {
               winston.info('Data source pair saved successfully');

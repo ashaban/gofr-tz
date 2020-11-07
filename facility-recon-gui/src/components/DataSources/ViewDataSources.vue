@@ -892,7 +892,7 @@ export default {
     uploadedSources () {
       let upload = []
       for (let sources of this.$store.state.dataSources) {
-        if (sources.source === 'upload') {
+        if (sources.source !== 'syncServer') {
           upload.push(sources)
         }
       }

@@ -415,14 +415,20 @@ router.get('/getJurisdictionsUpdatedFromHFR', (req, res) => {
 });
 
 router.get('/getBuildings', (req, res) => {
-  winston.info('Received a ;request to get list of buildings');
-  const {
+  winston.info('Received a request to get list of buildings');
+  let {
     jurisdiction,
     action,
     requestType,
     requestCategory,
     requestedUser,
+    onlyDVS
   } = req.query;
+  try {
+    onlyDVS = JSON.parse(onlyDVS)
+  } catch (error) {
+    onlyDVS = false
+  }
   let database;
   if (action === 'request' && requestCategory === 'requestsList') {
     database = config.getConf('hapi:requestsDBName');
@@ -457,6 +463,17 @@ router.get('/getBuildings', (req, res) => {
           if (!requestExtension) {
             return nxtBuilding();
           }
+        }
+        let isDVS = building.resource.type.find((type) => {
+          return type.coding.find((coding) => {
+            return coding.system === 'http://hfrportal.ehealth.go.tz/facilityType' && coding.code === 'DVS'
+          })
+        })
+        if(onlyDVS === true && !isDVS) {
+          return nxtBuilding()
+        }
+        if(onlyDVS === false && isDVS) {
+          return nxtBuilding()
         }
         const row = {};
         row.id = building.resource.id;
@@ -839,6 +856,7 @@ router.get('/getCodeSystem', (req, res) => {
     id
   },
   (codeSystem) => {
+    winston.error(codeSystem)
     let codeSystemResource = [];
     if (codeSystem.entry.length > 0 && codeSystem.entry[0].resource.concept) {
       codeSystemResource = codeSystem.entry[0].resource.concept;

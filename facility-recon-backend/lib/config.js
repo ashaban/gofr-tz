@@ -11,9 +11,11 @@ const path = require('path');
 const stdio = require('stdio');
 const nconf = require('nconf');
 
-nconf.env({
-  separator: '__',
-});
+nconf.argv()
+  .env({
+    separator: '__',
+  })
+  .file('decRules', `${__dirname}/../config/decisionRules.json`);
 
 const ops = stdio.getopt({
   conf: {
