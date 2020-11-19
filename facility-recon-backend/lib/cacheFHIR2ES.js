@@ -13,13 +13,16 @@ const cacheFHIR = () => {
     getLastIndexingTime().then((lastUpdateTime) => {
       async.eachSeries(tenancies, (tenancy, nxt) => {
         let tenancyID = config.getConf(`${tenancy}:tenancyid`)
+        const url = URI(config.getConf('mCSD:url'))
+          .segment(tenancyID)
+          .toString();
         let caching = new CacheFhirToES({
           ESBaseURL: config.getConf('elastic:server'),
           ESUsername: config.getConf('elastic:username'),
           ESPassword: config.getConf('elastic.password'),
           ESMaxCompilationRate: '60000/1m',
           ESMaxScrollContext: '60000',
-          FHIRBaseURL: `http://localhost:8081/${tenancyID}/fhir`,
+          FHIRBaseURL: url,
           FHIRUsername: '',
           FHIRPassword: '',
           relationshipsIDs: [], //if not specified then all relationships will be processed

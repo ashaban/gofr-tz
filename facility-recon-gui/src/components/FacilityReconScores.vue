@@ -170,6 +170,7 @@
               :search="searchPotential"
               :pagination.sync="pagination"
               class="elevation-1"
+              :sort-desc="[false]"
             >
               <template
                 slot="headers"
@@ -200,7 +201,7 @@
                         >
                           <v-icon>help</v-icon>
                         </v-btn>
-                        <span>The lower the score, the better the match</span>
+                        <span>The higher the score, the better the match</span>
                       </v-tooltip>
                     </th>
                     <th
@@ -976,7 +977,7 @@
                   <td>{{props.item.source1Code}}</td>
                   <td>{{props.item.source2Name}}</td>
                   <td>{{props.item.source2Code}}</td>
-                  <td>{{props.item}}</td>
+                  <td>{{props.item.flagComment}}</td>
                   <td>
                     <v-btn
                       v-if="$store.state.recoStatus == 'Done'"

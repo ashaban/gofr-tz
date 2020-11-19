@@ -36,7 +36,7 @@ router.post('/addJurisdiction', (req, res) => {
   winston.info('Received a request to add a new Jurisdiction');
   const form = new formidable.IncomingForm();
   form.parse(req, (err, fields, files) => {
-    const defaultDB = config.getConf('hapi:defaultDBName');
+    const defaultDB = config.getConf('hfr:tenancyid');
     fields.database = defaultDB;
     mcsd.addJurisdiction(fields, (error, id) => {
       if (error) {
@@ -54,10 +54,9 @@ router.post('/updateJurisdiction', (req, res) => {
   winston.info('Received a request to update a new Jurisdiction');
   const form = new formidable.IncomingForm();
   form.parse(req, (err, fields, files) => {
-    const defaultDB = config.getConf('hapi:defaultDBName');
+    const defaultDB = config.getConf('hfr:tenancyid');
     const url = URI(config.getConf('mCSD:url'))
       .segment(defaultDB)
-      .segment('fhir')
       .segment('Location')
       .segment(fields.id)
       .toString();
@@ -178,7 +177,7 @@ router.get('/getLocationByID/:id', (req, res) => {
   const id = req.params.id;
   mcsd.getLocationByID('', id, false, (location) => {
     if (location && location.entry && location.entry.length > 0) {
-      parseLocationResource(location.entry[0], config.getConf('hapi:defaultDBName'), (data) => {
+      parseLocationResource(location.entry[0], config.getConf('hfr:tenancyid'), (data) => {
         return res.json(data)
       });
     } else {
@@ -264,10 +263,9 @@ router.get('/getServices', (req, res) => {
 
 router.get('/getFacilityMissingFromHFR', (req, res) => {
   winston.info('Received a request to get list of buildings');
-  const database = config.getConf('hapi:requestsDBName');
+  const database = config.getConf('updaterequests:tenancyid');
   const url = URI(config.getConf('mCSD:url'))
     .segment(database)
-    .segment('fhir')
     .segment('Location')
     .addQuery('type', 'urn:ihe:iti:mcsd:2019:facility')
     .addQuery('_tag', 'NewFacility')
@@ -287,10 +285,9 @@ router.get('/getFacilityMissingFromHFR', (req, res) => {
 
 router.get('/getFacilityUpdatedFromHFR', (req, res) => {
   winston.info('Received a request to get list of buildings updated in HFR');
-  const database = config.getConf('hapi:requestsDBName');
+  const database = config.getConf('updaterequests:tenancyid');
   const url = URI(config.getConf('mCSD:url'))
     .segment(database)
-    .segment('fhir')
     .segment('Location')
     .addQuery('type', 'urn:ihe:iti:mcsd:2019:facility')
     .addQuery('_tag', 'UpdatedFacility')
@@ -310,10 +307,9 @@ router.get('/getFacilityUpdatedFromHFR', (req, res) => {
 
 router.get('/getJurisdictionsMissingFromHFR', (req, res) => {
   winston.info('Received a request to get HFR missing jurisdictions');
-  const database = config.getConf('hapi:requestsDBName');
+  const database = config.getConf('updaterequests:tenancyid');
   const url = URI(config.getConf('mCSD:url'))
     .segment(database)
-    .segment('fhir')
     .segment('Location')
     .addQuery('type:not', 'urn:ihe:iti:mcsd:2019:facility')
     .addQuery('_tag', 'NewJurisdiction')
@@ -361,10 +357,9 @@ router.get('/getJurisdictionsMissingFromHFR', (req, res) => {
 
 router.get('/getJurisdictionsUpdatedFromHFR', (req, res) => {
   winston.info('Received a request to get HFR updated jurisdictions');
-  const database = config.getConf('hapi:requestsDBName');
+  const database = config.getConf('updaterequests:tenancyid');
   const url = URI(config.getConf('mCSD:url'))
     .segment(database)
-    .segment('fhir')
     .segment('Location')
     .addQuery('type:not', 'urn:ihe:iti:mcsd:2019:facility')
     .addQuery('_tag', 'UpdatedJurisdiction')
@@ -431,7 +426,7 @@ router.get('/getBuildings', (req, res) => {
   }
   let database;
   if (action === 'request' && requestCategory === 'requestsList') {
-    database = config.getConf('hapi:requestsDBName');
+    database = config.getConf('updaterequests:tenancyid');
   }
   const filters = {
     parent: jurisdiction,
@@ -609,7 +604,7 @@ router.get('/getBuildings', (req, res) => {
 router.get('/getJurisdictions', (req, res) => {
   winston.info("Received a request to get jurisdictions list")
   const { jurisdiction } = req.query;
-  const dbName = config.getConf('hapi:defaultDBName');
+  const dbName = config.getConf('hfr:tenancyid');
   mcsd.getLocationChildren({
     parent: jurisdiction
   }, (jurisdictions) => {
@@ -646,12 +641,12 @@ router.post('/updateFromHFR', (req, res) => {
   const form = new formidable.IncomingForm();
   form.parse(req, (err, fields) => {
     const { id, parent, parentLevel } = fields;
-    const reqDB = config.getConf('hapi:requestsDBName');
+    const reqDB = config.getConf('updaterequests:tenancyid');
     let originalResource = {}
     let hfrResource = {}
     async.series({
       original: (callback) => {
-        const dbName = config.getConf('hapi:defaultDBName');
+        const dbName = config.getConf('hfr:tenancyid');
         mcsd.getLocationByID(dbName, id, false, (location) => {
           originalResource = location.entry[0]
           return callback(null);
@@ -698,10 +693,9 @@ router.post('/updateFromHFR', (req, res) => {
         // if level is 3 then check if DVS doesnt exist and create
         if(originalLevel !== (parseInt(parentLevel) + 1) && parseInt(parentLevel) === 3) {
           winston.info('Creating DVS')
-          let database = config.getConf('hapi:defaultDBName')
+          let database = config.getConf('hfr:tenancyid')
           let url = URI(config.getConf('mCSD:url'))
             .segment(database)
-            .segment('fhir')
             .segment('Location')
             .addQuery('partof', originalResource.resource.id)
             .addQuery('type', 'DVS')
@@ -769,7 +763,7 @@ router.post('/addFromHFR', (req, res) => {
   const form = new formidable.IncomingForm();
   form.parse(req, (err, fields) => {
     const { id, parent } = fields;
-    const database = config.getConf('hapi:requestsDBName');
+    const database = config.getConf('updaterequests:tenancyid');
     mcsd.getLocationByID(database, id, false, (location) => {
       let deletedIndex = 0;
       const total = location.entry[0].resource.meta.tag.length;
@@ -890,14 +884,14 @@ router.get('/getTree', (req, res) => {
       },
       (mcsdData) => {
         winston.info('Done Fetching FR Locations');
-        return callback(false, mcsdData);
+        return callback(null, mcsdData);
       });
     },
     parentDetails(callback) {
       if (sourceLimitOrgId === topOrgId) {
-        return callback(false, false);
+        return callback(null, false);
       }
-      mcsd.getLocationByID('', sourceLimitOrgId, false, details => callback(false, details));
+      mcsd.getLocationByID('', sourceLimitOrgId, false, details => callback(null, details));
     },
   }, (error, response) => {
     winston.info('Creating FR Tree');
@@ -917,7 +911,7 @@ router.get('/getTree', (req, res) => {
 
 router.get('/syncHFRFacilities', (req, res) => {
   let errorOccured = false;
-  const database = config.getConf('hapi:requestsDBName');
+  const database = config.getConf('updaterequests:tenancyid');
   winston.info('Getting facilities from HFR');
   let HFRMetadata = [];
   let facTypes;
@@ -936,8 +930,7 @@ router.get('/syncHFRFacilities', (req, res) => {
       async.eachSeries(facilities, (facility, nxtFacility) => {
         const identifier = `http://hfrportal.ehealth.go.tz|${facility.id}`;
         const url = URI(config.getConf('mCSD:url'))
-          .segment(config.getConf('hapi:defaultDBName'))
-          .segment('fhir')
+          .segment(config.getConf('hfr:tenancyid'))
           .segment('Location')
           .addQuery('identifier', identifier)
           .addQuery('_include', 'Location:partof')
@@ -1118,8 +1111,8 @@ router.get('/syncHFRFacilities', (req, res) => {
 
 router.get('/syncHFRAdminAreas', (req, res) => {
   let errorOccured = false;
-  const reqDB = config.getConf('hapi:requestsDBName');
-  const database = config.getConf('hapi:defaultDBName');
+  const reqDB = config.getConf('updaterequests:tenancyid');
+  const database = config.getConf('hfr:tenancyid');
   winston.info('Getting facilities from HFR');
   hfr.getAdminAreas((err, adminAreas) => {
     if (err) {
@@ -1135,7 +1128,6 @@ router.get('/syncHFRAdminAreas', (req, res) => {
       const identifier = `http://hfrportal.ehealth.go.tz|${adminArea.id}`;
       const url = URI(config.getConf('mCSD:url'))
         .segment(database)
-        .segment('fhir')
         .segment('Location')
         .addQuery('identifier', identifier)
         .addQuery('_include', 'Location:partof')
@@ -1370,7 +1362,6 @@ function parseLocationResource(building, database, callback) {
       }
       const url = URI(config.getConf('mCSD:url'))
         .segment(database)
-        .segment('fhir')
         .segment('Location')
         .addQuery('_id', building.resource.partOf.reference)
         .addQuery('_include:recurse', 'Location:partof')

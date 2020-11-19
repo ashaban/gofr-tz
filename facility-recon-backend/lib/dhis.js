@@ -237,20 +237,17 @@ function processOrgUnit(metadata, hasKey) {
     clientId,
   } = credentials;
 
-  const database = mixin.toTitleCase(name) + credentials.sourceOwner;
+  const database = mixin.toTitleCase(name)
   let counter = 0;
   const max = metadata.organisationUnits.length;
   // adding the fake orgid as the top orgid
   const fhir = {
     resourceType: 'Location',
-    id: credentials.topOrgId,
+    id: config.getConf("dhis2:topOrgId"),
+    name: 'Africa',
     status: 'active',
     mode: 'instance',
   };
-  fhir.identifier = [{
-    system: 'https://digitalhealth.intrahealth.org/source1',
-    value: credentials.topOrgId,
-  }];
   fhir.physicalType = {
     coding: [{
       system: 'http://hl7.org/fhir/location-physical-type',
@@ -259,8 +256,8 @@ function processOrgUnit(metadata, hasKey) {
     }],
     text: 'Jurisdiction',
   };
-  let hostURL = URI(config.getConf('mCSD:url')).segment(database)
-    .segment('fhir')
+  let hostURL = URI(config.getConf('mCSD:url'))
+    .segment(database)
     .segment('Location')
     .segment(fhir.id)
     .toString();
@@ -349,8 +346,8 @@ function processOrgUnit(metadata, hasKey) {
       };
     } else {
       fhir.partOf = {
-        reference: `Location/${credentials.topOrgId}`,
-        display: credentials.topOrgName,
+        reference: `Location/${config.getConf("dhis2:topOrgId")}`,
+        display: 'Africa',
       };
     }
     if (org.attributeValues) {
@@ -369,14 +366,16 @@ function processOrgUnit(metadata, hasKey) {
         }
       }
     }
-
-    hostURL = URI(config.getConf('mCSD:url')).segment(database)
-      .segment('fhir')
+console.log(JSON.stringify(fhir,0,2));
+    let hostURL = URI(config.getConf('mCSD:url'))
+      .segment(database)
       .segment('Location')
       .segment(fhir.id)
       .toString();
+console.log(hostURL);
+process.exit()
     options = {
-      url: hostURL.toString(),
+      url: hostURL,
       headers: {
         'Content-Type': 'application/fhir+json',
       },

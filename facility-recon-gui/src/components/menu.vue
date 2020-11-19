@@ -121,7 +121,7 @@
                 <span>{{ $t('App.menu.reconcile.tooltip') }}</span>
               </v-tooltip>
             </v-list>
-            <v-list :class="{ disabledMenu: Object.keys($store.state.activePair.source1).length===0,lastMenu: true }">
+            <!-- <v-list :class="{ disabledMenu: Object.keys($store.state.activePair.source1).length===0,lastMenu: true }">
               <v-tooltip right>
                 <v-list-tile
                   to="recoStatus"
@@ -137,7 +137,7 @@
                 </v-list-tile>
                 <span>{{ $t('App.menu.recoStatus.tooltip') }}</span>
               </v-tooltip>
-            </v-list>
+            </v-list> -->
           </ul>
         </li>
       </ul>

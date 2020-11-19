@@ -48,9 +48,6 @@ const fhir = require('./fhir')();
 const hapi = require('./hapi');
 const scores = require('./scores')();
 const es = require('./es');
-const defaultSetups = require('./defaultSetup.js');
-const { query } = require('../../../fhir2es/winston');
-const { match } = require('assert');
 
 const mongoUser = config.getConf('DB_USER');
 const mongoPasswd = config.getConf('DB_PASSWORD');
@@ -228,54 +225,13 @@ if (cluster.isMaster) {
     //create ES HFR index
     es.createESIndex('hfrfacilities', ['id', 'code', 'uuid'], [{name: 'name', type: 'text'}], () => {})
 
-    // check if FR DB Exists
-    const defaultDB = config.getConf('hapi:defaultDBName');
-    const requestsDB = config.getConf('hapi:requestsDBName');
-    let url = URI(config.getConf('mCSD:url')).segment(defaultDB).segment('fhir').segment('Location')
-      .toString();
-    const options = {
-      url,
-    };
-    url = false;
-    request.get(options, (err, res, body) => {
-      if (!res) {
-        winston.error('It appears that FHIR server is not running, quiting GOFR now ...');
-      }
-      if (res.statusCode === 404) {
-        async.series({
-          createDefaultDB: (callback) => {
-            hapi.createServer(defaultDB, (err) => {
-              if (err) {
-                winston.error(err);
-              } else {
-                createFakeOrgID(defaultDB);
-              }
-              callback(null);
-            });
-          },
-          createRequestsDB: (callback) => {
-            hapi.createServer(requestsDB, (err) => {
-              if (err) {
-                winston.error(err);
-              } else {
-                createFakeOrgID(requestsDB);
-              }
-              callback(null);
-            });
-          },
-        }, () => {
-          // launch
-          defaultSetups.initialize();
-        });
-      } else {
-        // check if FR has fake org id
-        createFakeOrgID(requestsDB);
-        createFakeOrgID(defaultDB);
-        createFakeOrgID('vims');
-      }
-    });
-
-    function createFakeOrgID(database) {
+    // let tenancies = [config.getConf('hfr:tenancyid'), config.getConf('dhis2:tenancyid'), config.getConf('vims:tenancyid'), config.getConf('updaterequests:tenancyid')]
+    // async.eachSeries(tenancies, (tenancy, nxtTenancy) => {
+    //   createFakeOrgID(tenancy, () => {
+    //     return nxtTenancy()
+    //   })
+    // })
+    function createFakeOrgID(database, callback) {
       mcsd.getLocationByID(database, topOrgId, false, (results) => {
         if (results.entry.length === 0) {
           winston.info('Fake Org ID does not exist into the FR Database, Creating now');
@@ -312,7 +268,10 @@ if (cluster.isMaster) {
             } else {
               winston.info('Fake Org Id Created Successfully');
             }
+            callback()
           });
+        } else {
+          callback()
         }
       });
     }
@@ -1914,11 +1873,19 @@ if (cluster.isMaster) {
             }
             let query = {
               query: {
-                fuzzy: {
-                  name: {
-                    value: document._source.name,
-                    fuzziness: 2
-                  }
+                bool: {
+                  must: [{
+                    script: {
+                      script: {
+                        source: `if(doc['${mappingColumn}.keyword'].size() == 0){return true}`,
+                        lang: "painless"
+                      }
+                    }
+                  }, {
+                    match: {
+                      name: document._source.name
+                    }
+                  }]
                 }
               }
             }

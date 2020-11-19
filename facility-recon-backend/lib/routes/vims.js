@@ -66,16 +66,48 @@ router.get('/syncVIMS', (req, res) => {
       logger.error(error);
     }
 
+    let africa = {
+      resourceType: 'Location',
+      name: 'Africa',
+      id: config.getConf("vims:topOrgId"),
+      physicalType: {
+        coding: [{
+          system: 'http://hl7.org/fhir/location-physical-type',
+          code: 'jdn',
+          display: 'Jurisdiction',
+        }],
+        text: 'Jurisdiction',
+      }
+    }
     const resourceBundle = {
       resourceType: 'Bundle',
       type: 'batch',
-      entry: [],
+      entry: [{
+        resource: africa,
+        request: {
+          method: 'PUT',
+          url: `Location/${africa.id}`,
+        }
+      }],
     };
     async.eachSeries(facilities.facilities, (facility, nextFacility) => {
+      if(facility.name === 'Duplicate' || facility.name === 'duplicate') {
+        return nextFacility()
+      }
       let zonename = searchLookup(zones["geographic-zones"], facility.geographicZoneId)
       let ftype = searchLookup(facilitytypes["facility-types"], facility.typeId)
       facility.zonename = zonename
       facility.facilityType = ftype
+
+      let zoneuuid = uuid5(zonename + 'vimsdistrictname', '843f5bd2-7d2a-4990-8e6e-373bd92605b5')
+      let zone = {
+        id: zoneuuid,
+        resourceType: 'Location',
+        name: zonename,
+        partOf: {
+          reference: `Location/${config.getConf("vims:topOrgId")}`
+        }
+      }
       let uuid = uuid5(facility.id.toString(), '7ee93e32-78da-4913-82f8-49eb0a618cfc')
       let entry = {
         resourceType: 'Location',
@@ -93,7 +125,8 @@ router.get('/syncVIMS', (req, res) => {
         }],
         active: facility.active,
         partOf: {
-          reference: 'Location/eac583d2-d1ba-11e8-a8d5-f2801f1b9fd1'
+          reference: `Location/${zone.id}`,
+          display: zone.name
         },
         physicalType: {
           coding: [
@@ -144,13 +177,13 @@ router.get('/syncVIMS', (req, res) => {
           entry.position.longitude = facility.longitude
         }
       }
-      if(facility.zonename) {
-        entry.extension = [{
-          url: 'zonename',
-          valueString: facility.zonename
-        }]
-      }
       resourceBundle.entry.push({
+        resource: zone,
+        request: {
+          method: 'PUT',
+          url: `Location/${zone.id}`,
+        },
+      }, {
         resource: entry,
         request: {
           method: 'PUT',
@@ -159,6 +192,7 @@ router.get('/syncVIMS', (req, res) => {
       })
       if (resourceBundle.entry.length >= 250) {
         mcsd.saveLocations(resourceBundle, tenancyid, (err, body) => {
+          resourceBundle.entry = []
           if (err) {
             winston.error(err);
             errorOccured = true;
@@ -171,7 +205,6 @@ router.get('/syncVIMS', (req, res) => {
     }, () => {
       if (resourceBundle.entry.length > 0) {
         mcsd.saveLocations(resourceBundle, tenancyid, (err, body) => {
-          winston.info(JSON.stringify(body,0,2))
           winston.info('Done Synchronizing VIMS Facilities!!!')
           if (err) {
             winston.error(err);

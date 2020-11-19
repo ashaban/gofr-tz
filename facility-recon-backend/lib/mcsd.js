@@ -44,13 +44,11 @@ module.exports = () => ({
     database,
   }, callback) {
     if (!database) {
-      database = config.getConf('hapi:defaultDBName');
+      database = config.getConf('hfr:tenancyid')
     }
-    let url = URI(config.getConf('mCSD:url'));
-    if (database) {
-      url = url.segment(database);
-    }
-    url = url.segment('fhir').segment('CodeSystem');
+    let url = URI(config.getConf('mCSD:url'))
+      .segment(database)
+      .segment('CodeSystem');
     if (codeSystemURI) {
       url.addQuery('url', codeSystemURI);
     }
@@ -71,7 +69,7 @@ module.exports = () => ({
         url = false;
         request.get(options, (err, res, body) => {
           if (!isJSON(body)) {
-            return callback(false, false);
+            return callback(null, false);
           }
           const mcsd = JSON.parse(body);
           const next = mcsd.link && mcsd.link.find(link => link.relation == 'next');
@@ -81,7 +79,7 @@ module.exports = () => ({
           if (mcsd.entry && mcsd.entry.length > 0) {
             codeSystems.entry = codeSystems.entry.concat(mcsd.entry);
           }
-          return callback(false, url);
+          return callback(null, url);
         });
       },
       (err, callback) => {
@@ -119,18 +117,16 @@ module.exports = () => ({
     id,
   }, callback) {
     if (!database) {
-      database = config.getConf('hapi:defaultDBName');
+      database = config.getConf('hfr:tenancyid')
     }
-    let url = URI(config.getConf('mCSD:url'));
-    if (database) {
-      url = url.segment(database);
+    let url = URI(config.getConf('mCSD:url'))
+      .segment(database)
+      .segment('Organization');
+
+    if(id) {
+      url.addQuery('_id', id)
     }
-    url = url.segment('fhir').segment('Organization');
-    if (id) {
-      url = `${url}?_id=${id.toString()}`;
-    } else {
-      url = url.toString();
-    }
+    url = url.toString();
     const organizations = {};
     organizations.entry = [];
     async.doWhilst(
@@ -141,7 +137,7 @@ module.exports = () => ({
         url = false;
         request.get(options, (err, res, body) => {
           if (!isJSON(body)) {
-            return callback(false, false);
+            return callback(null, false);
           }
           const mcsd = JSON.parse(body);
           const next = mcsd.link.find(link => link.relation == 'next');
@@ -151,7 +147,7 @@ module.exports = () => ({
           if (mcsd.entry && mcsd.entry.length > 0) {
             organizations.entry = organizations.entry.concat(mcsd.entry);
           }
-          return callback(false, url);
+          return callback(null, url);
         });
       },
       (err, callback) => {
@@ -168,9 +164,11 @@ module.exports = () => ({
     id,
   }, callback) {
     if (!database) {
-      database = config.getConf('hapi:defaultDBName');
+      database = config.getConf('hfr:tenancyid')
     }
-    const baseUrl = URI(config.getConf('mCSD:url')).segment(database).segment('fhir').segment('HealthcareService');
+    let baseUrl = URI(config.getConf('mCSD:url'))
+      .segment(database)
+      .segment('HealthcareService')
     let url = baseUrl;
     baseUrl.toString();
     if (id) {
@@ -209,13 +207,13 @@ module.exports = () => ({
         request.get(options, (err, res, body) => {
           if (!isJSON(body)) {
             cache.del(`started_${baseUrl}`);
-            return callback(false, false);
+            return callback(null, false);
           }
           body = JSON.parse(body);
           if (body.total == 0 && body.entry && body.entry.length > 0) {
             winston.error('Non mCSD data returned');
             cache.del(`started_${baseUrl}`);
-            return callback(false, false);
+            return callback(null, false);
           }
           const next = body.link.find(link => link.relation == 'next');
           if (next) {
@@ -224,7 +222,7 @@ module.exports = () => ({
           if (body.entry && body.entry.length > 0) {
             services.entry = services.entry.concat(body.entry);
           }
-          return callback(false, url);
+          return callback(null, url);
         });
       },
       (err, callback) => {
@@ -244,9 +242,14 @@ module.exports = () => ({
   },
 
   getLocations(database, callback) {
-    const baseUrl = URI(config.getConf('mCSD:url')).segment(database).segment('fhir').segment('Location')
+    if (!database) {
+      database = config.getConf('hfr:tenancyid')
+    }
+    let baseUrl = URI(config.getConf('mCSD:url'))
+      .segment(database)
+      .segment('Location')
       .toString();
-    let url = `${baseUrl}?_count=37000`;
+    let url = `${baseUrl}?_count=200`;
     let locations;
     locations = cache.get(`url_${baseUrl}`);
     if (locations) {
@@ -276,13 +279,13 @@ module.exports = () => ({
         request.get(options, (err, res, body) => {
           if (!isJSON(body)) {
             cache.del(`started_${baseUrl}`);
-            return callback(false, false);
+            return callback(null, false);
           }
           body = JSON.parse(body);
           if (body.total == 0 && body.entry && body.entry.length > 0) {
             winston.error('Non mCSD data returned');
             cache.del(`started_${baseUrl}`);
-            return callback(false, false);
+            return callback(null, false);
           }
           const next = body.link.find(link => link.relation == 'next');
           if (next) {
@@ -291,7 +294,7 @@ module.exports = () => ({
           if (body.entry && body.entry.length > 0) {
             locations.entry = locations.entry.concat(body.entry);
           }
-          return callback(false, url);
+          return callback(null, url);
         });
       },
       (err, callback) => {
@@ -312,13 +315,11 @@ module.exports = () => ({
 
   getLocationByID(database, id, includeFacilityOrganization, callback) {
     if (!database) {
-      database = config.getConf('hapi:defaultDBName');
+      database = config.getConf('hfr:tenancyid')
     }
-    let url = URI(config.getConf('mCSD:url'));
-    if (database) {
-      url = url.segment(database);
-    }
-    url = url.segment('fhir').segment('Location');
+    let url = URI(config.getConf('mCSD:url'))
+      .segment(database)
+      .segment('Location')
     if (id) {
       url.addQuery('_id', id);
     }
@@ -326,7 +327,6 @@ module.exports = () => ({
       url.addQuery('_include', 'Location:organization');
     }
     url = url.toString();
-
     const locations = {};
     locations.entry = [];
     async.doWhilst(
@@ -374,7 +374,7 @@ module.exports = () => ({
         url = false;
         request.get(options, (err, res, body) => {
           if (!isJSON(body)) {
-            return callback(false, false);
+            return callback(null, false);
           }
           body = JSON.parse(body);
           const next = body.link && body.link.find(link => link.relation == 'next');
@@ -387,7 +387,7 @@ module.exports = () => ({
             delete locations.entry;
             locations = body;
           }
-          return callback(false, url);
+          return callback(null, url);
         });
       },
       (err, callback) => {
@@ -400,12 +400,16 @@ module.exports = () => ({
   },
   getLocationByIdentifier(database, identifier, callback) {
     if (!database) {
-      database = config.getConf('hapi:defaultDBName');
+      database = config.getConf('hfr:tenancyid')
     }
     const locations = {};
     locations.entry = [];
     if (identifier) {
-      var url = `${URI(config.getConf('mCSD:url')).segment(database).segment('fhir').segment('Location')}?identifier=${identifier}`.toString();
+      var url = URI(config.getConf('mCSD:url'))
+        .segment(database)
+        .segment('Location')
+        .addQuery('identifier', identifier)
+        .toString()
     } else {
       return callback(locations);
     }
@@ -417,7 +421,7 @@ module.exports = () => ({
         url = false;
         request.get(options, (err, res, body) => {
           if (!isJSON(body)) {
-            return callback(false, false);
+            return callback(null, false);
           }
           body = JSON.parse(body);
           const next = body.link.find(link => link.relation == 'next');
@@ -427,7 +431,7 @@ module.exports = () => ({
           if (body.entry && body.entry.length > 0) {
             locations.entry = locations.entry.concat(body.entry);
           }
-          return callback(false, url);
+          return callback(null, url);
         });
       },
       (err, callback) => {
@@ -445,62 +449,69 @@ module.exports = () => ({
     recursive = true,
   }, callback) {
     if (!database) {
-      database = config.getConf('hapi:defaultDBName');
+      database = config.getConf('hfr:tenancyid')
     }
+    let baseUrl = URI(config.getConf('mCSD:url'))
+      .segment(database)
+      .segment('Location')
+      .toString()
     if (!parent) {
       parent = '';
     }
-    let baseUrl = URI(config.getConf('mCSD:url'));
-    if (database) {
-      baseUrl = baseUrl.segment(database);
-    }
-    baseUrl = baseUrl.segment('fhir').segment('Location').toString();
     let url = baseUrl;
     if (parent && recursive) {
       url += `?_id=${parent}&_revinclude:recurse=Location:partof`;
     } else if (parent) {
       url += `?_id=${parent}&_revinclude=Location:partof`;
     }
-    url = url.toString();
     const locations = {
       entry: [],
     };
     winston.info(`Getting ${url} from server`);
     async.doWhilst(
-      (doCallback) => {
+      (callback) => {
         const options = {
           url,
         };
         url = false;
         request.get(options, (err, res, body) => {
           if (!isJSON(body)) {
-            return doCallback(false, false);
+            return callback(null, false);
           }
           body = JSON.parse(body);
           if (body.total == 0 && body.entry && body.entry.length > 0) {
             winston.error('Non mCSD data returned');
-            return doCallback(false, false);
+            return callback(null, false);
           }
           if (!body.entry || body.entry.length === 0) {
-            return doCallback(false, false);
+            return callback(null, false);
           }
           const next = body.link.find(link => link.relation == 'next');
           if (next) {
             url = next.url;
           }
           locations.entry = locations.entry.concat(body.entry);
-          return doCallback(false, url);
+          return callback(null, url);
         });
       },
       (err, callback) => {
         return callback(null, url !== false)
       },
-      () => callback(locations),
+      () => {
+        callback(locations)
+      }
     );
   },
 
   getImmediateChildren(database, id, callback) {
-    let url = `${URI(config.getConf('mCSD:url')).segment(database).segment('fhir').segment('Location')}?partof=${id.toString()}`;
+    if (!database) {
+      database = config.getConf('hfr:tenancyid')
+    }
+    let url = URI(config.getConf('mCSD:url'))
+      .segment(database)
+      .segment('Location')
+      .addQuery('partof', id)
+      .toString()
     const locations = {};
     locations.entry = [];
     async.doWhilst(
@@ -511,7 +522,7 @@ module.exports = () => ({
         url = false;
         request.get(options, (err, res, body) => {
           if (!isJSON(body)) {
-            return callback(false, false);
+            return callback(null, false);
           }
           const mcsd = JSON.parse(body);
           const next = mcsd.link.find(link => link.relation == 'next');
@@ -521,7 +532,7 @@ module.exports = () => ({
           if (mcsd.entry && mcsd.entry.length > 0) {
             locations.entry = locations.entry.concat(mcsd.entry);
           }
-          return callback(false, url);
+          return callback(null, url);
         });
       },
       (err, callback) => {
@@ -534,6 +545,9 @@ module.exports = () => ({
   },
 
   getLocationParentsFromDB(database, entityParent, topOrg, details, callback) {
+    if (!database) {
+      database = config.getConf('hfr:tenancyid')
+    }
     const parents = [];
     if (entityParent == null
       || entityParent == false
@@ -553,8 +567,11 @@ module.exports = () => ({
 
       const splParent = entityParent.split('/');
       entityParent = splParent[(splParent.length - 1)];
-      const url = `${URI(config.getConf('mCSD:url')).segment(database).segment('fhir').segment('Location')}?_id=${entityParent.toString()}`;
-
+      let url = URI(config.getConf('mCSD:url'))
+        .segment(database)
+        .segment('Location')
+        .addQuery('_id', entityParent)
+        .toString()
       const options = {
         url,
       };
@@ -835,11 +852,15 @@ module.exports = () => ({
   },
 
   countLevels(db, topOrgId, callback) {
+    if (!db) {
+      db = config.getConf('hfr:tenancyid')
+    }
     function constructURL(id, callback) {
-      const url = `${URI(config.getConf('mCSD:url'))
+      let url = URI(config.getConf('mCSD:url'))
         .segment(db)
-        .segment('fhir')
-        .segment('Location')}?partof=Location/${id.toString()}`;
+        .segment('Location')
+        .addQuery('partof', `Location/${id.toString()}`)
+        .toString()
       return callback(url);
     }
 
@@ -881,6 +902,9 @@ module.exports = () => ({
   },
 
   editLocation(id, name, parent, db, callback) {
+    if (!db) {
+      db = config.getConf('hfr:tenancyid')
+    }
     this.getLocationByID(db, id, false, (location) => {
       location.entry[0].resource.name = name;
       const promise = new Promise((resolve, reject) => {
@@ -920,6 +944,9 @@ module.exports = () => ({
     level,
     parent,
   }, callback) {
+    if (!database) {
+      database = config.getConf('hfr:tenancyid')
+    }
     const resource = {};
     resource.resourceType = 'Location';
     resource.meta = {};
@@ -1253,7 +1280,7 @@ module.exports = () => ({
   addBuilding(fields, callback) {
     let database = '';
     if (fields.action && fields.action === 'request') {
-      database = config.getConf('hapi:requestsDBName');
+      database = config.getConf('updaterequests:tenancyid');
     }
     async.series([
       (callback) => {
@@ -1682,7 +1709,7 @@ module.exports = () => ({
     status,
     requestType,
   }, callback) {
-    const database = config.getConf('hapi:requestsDBName');
+    const database = config.getConf('updaterequests:tenancyid');
     this.getLocationByID(database, id, true, (location) => {
       if (!location || !location.entry || location.entry.length === 0) {
         winston.error(`No location with id ${id} found`);
@@ -1967,11 +1994,10 @@ module.exports = () => ({
     id,
   }, callback) {
     if (!database) {
-      database = config.getConf('hapi:defaultDBName');
+      database = config.getConf('hfr:tenancyid');
     }
-    const urlPrefix = URI(config.getConf('mCSD:url'))
+    let urlPrefix = URI(config.getConf('mCSD:url'))
       .segment(database)
-      .segment('fhir')
       .segment(resource);
     const url = URI(urlPrefix).segment(id).toString();
     const options = {
@@ -1994,12 +2020,11 @@ module.exports = () => ({
     database
   }) {
     if (!database) {
-      database = config.getConf('hapi:defaultDBName');
+      database = config.getConf('hfr:tenancyid');
     }
     return new Promise((resolve) => {
-      const url = URI(config.getConf('mCSD:url'))
+      let url = URI(config.getConf('mCSD:url'))
         .segment(database)
-        .segment('fhir')
         .segment(resourceType)
         .segment(resourceID)
         .segment('$meta-delete')
@@ -2024,10 +2049,9 @@ module.exports = () => ({
     mongo.getMappingDBs(sourceId, (dbs) => {
       async.parallel({
         deleteFromSrcDB: (callback1) => {
-          const db = mixin.toTitleCase(sourceName) + sourceOwner;
-          const url_prefix = URI(config.getConf('mCSD:url'))
+          const db = sourceName
+          let url_prefix = URI(config.getConf('mCSD:url'))
             .segment(db)
-            .segment('fhir')
             .segment('Location');
           const url = URI(url_prefix).segment(id).toString();
           const options = {
@@ -2036,15 +2060,14 @@ module.exports = () => ({
           request.delete(options, (err, res, body) => {
             cacheFHIR2ES.cacheFHIR()
             this.cleanCache(url_prefix.toString());
-            return callback1(false);
+            return callback1(null);
           });
         },
         deleteFromMappingDB: (callback2) => {
           async.each(dbs, (db, nxtDB) => {
-            const sourceDB = mixin.toTitleCase(sourceName) + sourceOwner;
+            const sourceDB = sourceName;
             const identifier = URI(config.getConf('mCSD:url'))
               .segment(sourceDB)
-              .segment('fhir')
               .segment('Location')
               .segment(id)
               .toString();
@@ -2053,7 +2076,6 @@ module.exports = () => ({
                 async.each(mapped.entry, (entry, nxtEntry) => {
                   const url_prefix = URI(config.getConf('mCSD:url'))
                     .segment(db.db)
-                    .segment('fhir')
                     .segment('Location');
                   const url = URI(url_prefix).segment(entry.resource.id).toString();
                   const options = {
@@ -2068,7 +2090,7 @@ module.exports = () => ({
                 return nxtDB();
               }
             });
-          }, () => callback2(false));
+          }, () => callback2(null));
         },
       }, () => {
         callback(false, false);
@@ -2078,13 +2100,11 @@ module.exports = () => ({
 
   saveLocations(mCSD, database, callback) {
     if (!database) {
-      database = config.getConf('hapi:defaultDBName');
+      database = config.getConf('hfr:tenancyid');
     }
-    let url = URI(config.getConf('mCSD:url'));
-    if (database) {
-      url = url.segment(database);
-    }
-    url = url.segment('fhir').toString();
+    let url = URI(config.getConf('mCSD:url'))
+      .segment(database)
+      .toString()
     const options = {
       url,
       headers: {
@@ -2102,11 +2122,12 @@ module.exports = () => ({
         winston.error(err);
         return callback(err);
       }
-      cacheFHIR2ES.cacheFHIR()
+      // cacheFHIR2ES.cacheFHIR()
       this.cleanCache(`${url}/Location`);
       callback(err, body);
     });
   },
+
   cleanCache(url, selfOnly) {
     for (const key of cache.keys()) {
       if (key.substring(0, url.length + 4) === `url_${url}`) {

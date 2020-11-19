@@ -18,19 +18,25 @@
     "baseURL": "https://resourcemap.instedd.org",
     "username": "allyshaban5@gmail.com",
     "password": "Tanzania_Bid",
-    "tenancyid": "hfr"
+    "tenancyid": "hfr",
+    "topOrgId": "eac583d2-d1ba-11e8-a8d5-f2801f1b9fd1"
   },
   "vims": {
     "baseURL": "https://vimstraining.elmis-dev.org",
     "username": "vims-admin",
     "password": "PASSW0RD@2019",
-    "tenancyid": "vims"
+    "tenancyid": "vims",
+    "topOrgId": "ec3bf39b-2a4c-4d60-8ab6-3156660bce99"
   },
   "dhis2": {
-    "baseURL": "http://localhost:8984",
-    "registryDoc": "facOrgsRegistry",
-    "username": "admin",
-    "password": "admin"
+    "baseURL": "https://vimstraining.elmis-dev.org",
+    "username": "vims-admin",
+    "password": "PASSW0RD@2019",
+    "tenancyid": "dhis2",
+    "topOrgId": "7709f587-103e-4450-b42f-4839570a412c"
+  },
+  "updaterequests": {
+    "tenancyid": "updaterequests"
   },
   "mCSD": {
     "fakeOrgId": "eac583d2-d1ba-11e8-a8d5-f2801f1b9fd1",

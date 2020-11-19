@@ -196,6 +196,7 @@ function createServer(database, callback) {
 }
 
 function serverExist(database, callback) {
+  return callback(true);
   const url = URI(config.getConf('mCSD:url'))
     .segment(database)
     .segment('fhir')
