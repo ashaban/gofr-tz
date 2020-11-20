@@ -244,7 +244,7 @@ export default {
       })
     },
     accept (item) {
-      axios.get(`/FR/getLocationByID/${item.id}`).then((resp) => {
+      axios.get(`/FR/getLocationByID/${item.ouuid}`).then((resp) => {
         this.activeJurisdiction = {}
         this.acceptingItem = item
         this.approve = true
@@ -256,6 +256,7 @@ export default {
       this.$store.state.progressTitle = 'Saving ...'
       let formData = new FormData()
       formData.append('id', this.acceptingItem.id)
+      formData.append('ouuid', this.acceptingItem.ouuid)
       if (!this.keepParent) {
         formData.append('parent', this.activeJurisdiction.id)
       }

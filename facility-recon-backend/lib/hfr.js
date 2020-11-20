@@ -33,15 +33,16 @@ module.exports = () => ({
           } else {
             winston.error(body);
             winston.error('Non JSON data returned by HFR while getting metadata');
-            return callback(err, false);
+            return callback(null, false);
           }
-          return callback(err, nexturl);
+          return callback(null, nexturl);
         });
-      }, () => {
+      },
+      (err, callback) => {
         if (nexturl) {
           winston.info(`Fetching In ${nexturl}`);
         }
-        return (nexturl !== false);
+        return callback(null, nexturl !== false);
       }, () => callback(metadata),
     );
   },
@@ -74,15 +75,17 @@ module.exports = () => ({
           } else {
             winston.error(body);
             winston.error('Non JSON data returned by HFR while getting facilities');
-            return callback(err, false);
+            return callback(null, false);
           }
-          return callback(err, nexturl);
+          nexturl = false
+          return callback(null, nexturl);
         });
-      }, () => {
+      },
+      (err, callback) => {
         if (nexturl) {
           winston.info(`Fetching In ${nexturl}`);
         }
-        return (nexturl !== false);
+        return callback(null, nexturl !== false);
       }, () => callback(facilities),
     );
   },

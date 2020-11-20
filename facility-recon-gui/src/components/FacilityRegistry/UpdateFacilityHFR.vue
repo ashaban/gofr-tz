@@ -2,7 +2,7 @@
   <v-container fluid>
     <v-dialog
       v-model="approve"
-      width="630px"
+      width="1000px"
     >
       <v-toolbar
         color="error"
@@ -51,6 +51,9 @@
                 <v-flex>
                   Name: {{originalFacility.name}}
                 </v-flex>
+                <v-flex>
+                  Facility Code: {{originalFacility.code}}
+                </v-flex>
                 <v-flex v-if="originalFacility.type">
                   Type: <template v-if="originalFacility.type.text">{{originalFacility.type.text}}</template>
                   <template v-else-if="originalFacility.type.code">{{originalFacility.type.code}}</template>
@@ -70,6 +73,9 @@
                 </v-flex>
                 <v-flex>
                   Name: {{acceptingItem.name}}
+                </v-flex>
+                <v-flex>
+                  Facility Code: {{acceptingItem.code}}
                 </v-flex>
                 <v-flex v-if="acceptingItem.type">
                   Type: {{acceptingItem.type.text}}
@@ -261,7 +267,7 @@ export default {
       })
     },
     accept (item) {
-      axios.get(`/FR/getLocationByID/${item.id}`).then((resp) => {
+      axios.get(`/FR/getLocationByID/${item.ouuid}`).then((resp) => {
         this.activeJurisdiction = {}
         this.acceptingItem = item
         this.approve = true
@@ -273,6 +279,7 @@ export default {
       this.$store.state.progressTitle = 'Saving ...'
       let formData = new FormData()
       formData.append('id', this.acceptingItem.id)
+      formData.append('ouuid', this.acceptingItem.ouuid)
       if (!this.keepParent) {
         formData.append('parent', this.activeJurisdiction.id)
       }

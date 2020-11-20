@@ -9,6 +9,7 @@ const URI = require('urijs');
 const async = require('async');
 const lodash = require('lodash');
 const uuid5 = require('uuid/v5');
+const uuid4 = require('uuid/v4');
 
 const router = express.Router();
 const mcsd = require('../mcsd')();
@@ -296,6 +297,10 @@ router.get('/getFacilityUpdatedFromHFR', (req, res) => {
     const buildingsTable = [];
     async.each(buildings.entry, (building, nxtBuilding) => {
       parseLocationResource(building, database, (row) => {
+        let ouidtag = building.resource.meta.tag.find((tag) => {
+          return tag.display === 'Original UUID'
+        })
+        row.ouuid = ouidtag.code
         buildingsTable.push(row);
         return nxtBuilding();
       });
@@ -368,6 +373,10 @@ router.get('/getJurisdictionsUpdatedFromHFR', (req, res) => {
     const jurisdictionsTable = [];
     async.each(jurisdictions.entry, (jurisdiction, nxtJurisdiction) => {
       const row = {};
+      let ouidtag = jurisdiction.resource.meta.tag.find((tag) => {
+        return tag.display === 'Original UUID'
+      })
+      row.ouuid = ouidtag.code
       row.id = jurisdiction.resource.id;
       row.name = jurisdiction.resource.name;
       let code;
@@ -640,14 +649,14 @@ router.post('/updateFromHFR', (req, res) => {
   let errorOccured = false;
   const form = new formidable.IncomingForm();
   form.parse(req, (err, fields) => {
-    const { id, parent, parentLevel } = fields;
+    const { id, ouuid, parent, parentLevel } = fields;
     const reqDB = config.getConf('updaterequests:tenancyid');
     let originalResource = {}
     let hfrResource = {}
     async.series({
       original: (callback) => {
         const dbName = config.getConf('hfr:tenancyid');
-        mcsd.getLocationByID(dbName, id, false, (location) => {
+        mcsd.getLocationByID(dbName, ouuid, false, (location) => {
           originalResource = location.entry[0]
           return callback(null);
         })
@@ -655,26 +664,51 @@ router.post('/updateFromHFR', (req, res) => {
       hfr: (callback) => {
         mcsd.getLocationByID(reqDB, id, false, (location) => {
           let deletedIndex = 0;
-          const total = location.entry[0].resource.meta.tag.length;
+          let total = location.entry[0].resource.meta.tag.length;
           for (let index = 0; index < total; index++) {
             if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'Admin_div') {
               location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
             } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'parentName') {
               location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
             } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'parentID') {
               location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
             } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'details') {
               location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
             } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'NewFacility') {
               location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
             } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'UpdatedFacility') {
               location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
             } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'NewJurisdiction') {
               location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
             } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'UpdatedJurisdiction') {
               location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
+            } else if (location.entry[0].resource.meta.tag[index - deletedIndex].display === 'Original UUID') {
+              location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
             }
-            deletedIndex += 1;
+          }
+
+          deletedIndex = 0;
+          total = location.entry[0].resource.extension.length;
+          for (let index = 0; index < total; index++) {
+            if (location.entry[0].resource.extension[index - deletedIndex].url === 'Admin_div') {
+              location.entry[0].resource.extension.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
+            }else if (location.entry[0].resource.extension[index - deletedIndex].url === 'parentName') {
+              location.entry[0].resource.extension.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
+            }else if (location.entry[0].resource.extension[index - deletedIndex].url === 'parentID') {
+              location.entry[0].resource.extension.splice(index - deletedIndex, 1);
+              deletedIndex += 1;
+            }
           }
           hfrResource = location.entry[0];
           return callback(null);
@@ -715,46 +749,120 @@ router.post('/updateFromHFR', (req, res) => {
         }
       }
     }, () => {
+      let originalID = originalResource.resource.id
       originalResource = lodash.merge(originalResource, hfrResource);
-      if(parent) {
-        originalResource.resource.partOf = {
-          reference: `Location/${parent}`,
-        };
-      }
-      if(parentLevel) {
-        originalResource.resource.type = [{
-          coding: [{
-            system: '2.25.123494412831734081331965080571820180508',
-            code: parseInt(parentLevel) + 1,
-          }],
-        }];
-      }
-      bundle.entry.push({
-        resource: originalResource.resource,
-        request: {
-          method: 'PUT',
-          url: `Location/${originalResource.resource.id}`,
-        },
+      originalResource.resource.id = originalID
+
+      let isFacility = originalResource.resource.type.find((typ) => {
+        return typ.coding && typ.coding.find((coding) => {
+          return coding.code === 'urn:ihe:iti:mcsd:2019:facility'
+        })
       })
-      mcsd.saveLocations(bundle, '', (err, body) => {
-        if (err) {
-          winston.error(err);
-          errorOccured = true;
-          return res.status(500).send();
+      let parentID = parent
+      if(!parent) {
+        parentID = originalResource.resource.partOf.reference.split('/')[1]
+      }
+      getDVS(isFacility, parentID, (dvs) => {
+        if(dvs) {
+          if(!originalResource.resource.extension) {
+            location.entry[0].resource.extension = []
+          }
+          for(let index in originalResource.resource.extension) {
+            if(originalResource.resource.extension[index].url === 'DistrictVaccineStore') {
+              originalResource.resource.extension.splice(index, 1)
+            }
+          }
+          originalResource.resource.extension.push({
+            url: 'DistrictVaccineStore',
+            valueReference: {
+              reference: `Location/${dvs.entry[0].resource.id}`
+            }
+          })
         }
-        winston.info('Location saved successfully');
-        winston.info('Deleting location from HFR cache');
-        mcsd.deleteResource({
-          database: reqDB,
-          resource: 'Location',
-          id,
-        }, () => {
-          winston.info('Delete operation completed');
-          res.status(201).send();
+        if(parent) {
+          originalResource.resource.partOf = {
+            reference: `Location/${parent}`,
+          };
+        }
+        if(parentLevel) {
+          originalResource.resource.type = [{
+            coding: [{
+              system: '2.25.123494412831734081331965080571820180508',
+              code: parseInt(parentLevel) + 1,
+            }],
+          }];
+        }
+        bundle.entry.push({
+          resource: originalResource.resource,
+          request: {
+            method: 'PUT',
+            url: `Location/${originalResource.resource.id}`,
+          },
+        })
+        mcsd.saveLocations(bundle, '', (err, body) => {
+          if (err) {
+            winston.error(err);
+            errorOccured = true;
+            return res.status(500).send();
+          }
+          winston.info('Location saved successfully');
+          winston.info('Deleting location from HFR cache');
+          mcsd.deleteResource({
+            database: reqDB,
+            resource: 'Location',
+            id,
+          }, () => {
+            winston.info('Delete operation completed');
+            res.status(201).send();
+          });
         });
-      });
+      })
     })
   });
+
+  function getDVS(isFacility, parent, callback) {
+    if(!isFacility || !parent) {
+      return callback()
+    }
+
+    let url = URI(config.getConf('mCSD:url'))
+      .segment(config.getConf('hfr:tenancyid'))
+      .segment('Location')
+      .addQuery('_id', parent)
+      .addQuery('_include:recurse', 'Location:partof')
+      .toString();
+    mcsd.executeURL(url, (parents) => {
+      if(!parents.entry) {
+        return callback()
+      }
+      let dvsParent
+      for(let entry of parents.entry) {
+        if(!entry.resource.type) {
+          continue
+        }
+        for(let type of entry.resource.type) {
+          for(let coding of type.coding) {
+            if(coding.system === '2.25.123494412831734081331965080571820180508' && coding.code == '4') {
+              dvsParent = entry.resource.id
+            }
+          }
+        }
+      }
+      if(dvsParent) {
+        let url = URI(config.getConf('mCSD:url'))
+          .segment(config.getConf('hfr:tenancyid'))
+          .segment('Location')
+          .addQuery('partof', dvsParent)
+          .addQuery('type', 'DVS')
+          .toString();
+        mcsd.executeURL(url, (dvs) => {
+          return callback(dvs)
+        })
+      } else {
+        return callback()
+      }
+    })
+  }
 });
 
 router.post('/addFromHFR', (req, res) => {
@@ -766,52 +874,167 @@ router.post('/addFromHFR', (req, res) => {
     const database = config.getConf('updaterequests:tenancyid');
     mcsd.getLocationByID(database, id, false, (location) => {
       let deletedIndex = 0;
-      const total = location.entry[0].resource.meta.tag.length;
+      let total = location.entry[0].resource.meta.tag.length;
       for (let index = 0; index < total; index++) {
         if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'Admin_div') {
           location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
         } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'parentName') {
           location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
         } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'parentID') {
           location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
         } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'details') {
           location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
+        } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'NewFacility') {
+          location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
+        } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'UpdatedFacility') {
+          location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
+        } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'NewJurisdiction') {
+          location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
+        } else if (location.entry[0].resource.meta.tag[index - deletedIndex].code === 'UpdatedJurisdiction') {
+          location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
+        } else if (location.entry[0].resource.meta.tag[index - deletedIndex].display === 'Original UUID') {
+          location.entry[0].resource.meta.tag.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
         }
-        deletedIndex += 1;
       }
+
+      deletedIndex = 0;
+      total = location.entry[0].resource.extension.length;
+      for (let index = 0; index < total; index++) {
+        if (location.entry[0].resource.extension[index - deletedIndex].url === 'Admin_div') {
+          location.entry[0].resource.extension.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
+        }else if (location.entry[0].resource.extension[index - deletedIndex].url === 'parentName') {
+          location.entry[0].resource.extension.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
+        }else if (location.entry[0].resource.extension[index - deletedIndex].url === 'parentID') {
+          location.entry[0].resource.extension.splice(index - deletedIndex, 1);
+          deletedIndex += 1;
+        }
+      }
+      let isFacility = location.entry[0].resource.type.find((typ) => {
+        return typ.coding && typ.coding.find((coding) => {
+          return coding.code === 'urn:ihe:iti:mcsd:2019:facility'
+        })
+      })
+      let locID
+      if(isFacility) {
+        let ident = location.entry[0].resource.identifier.find((ident) => {
+          return ident.type.text === 'id'
+        })
+        if(ident) {
+          locID = ident.value
+        }
+      } else {
+        let ident = location.entry[0].resource.identifier.find((ident) => {
+          return ident.type.text === 'code'
+        })
+        if(ident) {
+          locID = ident.value
+        }
+        if(locID) {
+          locID += location.entry[0].resource.name
+        }
+      }
+      winston.error(locID)
+      location.entry[0].resource.id = uuid5(locID.toString(), '7ee93e32-78da-4913-82f8-49eb0a618cfc')
       location.entry[0].resource.partOf = {
         reference: `Location/${parent}`,
       };
-      const bundle = {
-        resourceType: 'Bundle',
-        type: 'batch',
-        entry: [{
-          resource: location.entry[0].resource,
-          request: {
-            method: 'PUT',
-            url: `Location/${id}`,
-          },
-        }],
-      };
-      mcsd.saveLocations(bundle, '', (err, body) => {
-        if (err) {
-          winston.error(err);
-          errorOccured = true;
-          return res.status(500).send();
+      getDVS(isFacility, parent, (dvs) => {
+        if(dvs) {
+          if(!location.entry[0].resource.extension) {
+            location.entry[0].resource.extension = []
+          }
+          location.entry[0].resource.extension.push({
+            url: 'DistrictVaccineStore',
+            valueReference: {
+              reference: `Location/${dvs.entry[0].resource.id}`
+            }
+          })
         }
-        winston.info('Location saved successfully');
-        winston.info('Deleting location from HFR cache');
-        mcsd.deleteResource({
-          database,
-          resource: 'Location',
-          id,
-        }, () => {
-          winston.info('Delete operation completed');
-          res.status(201).send();
+        const bundle = {
+          resourceType: 'Bundle',
+          type: 'batch',
+          entry: [{
+            resource: location.entry[0].resource,
+            request: {
+              method: 'PUT',
+              url: `Location/${location.entry[0].resource.id}`,
+            },
+          }],
+        };
+        mcsd.saveLocations(bundle, '', (err, body) => {
+          if (err) {
+            winston.error(err);
+            errorOccured = true;
+            return res.status(500).send();
+          }
+          winston.info('Location saved successfully');
+          winston.info('Deleting location from HFR cache');
+          mcsd.deleteResource({
+            database,
+            resource: 'Location',
+            id,
+          }, () => {
+            winston.info('Delete operation completed');
+            res.status(201).send();
+          });
         });
-      });
+      })
     });
   });
+
+  function getDVS(isFacility, parent, callback) {
+    if(!isFacility) {
+      return callback()
+    }
+    let url = URI(config.getConf('mCSD:url'))
+      .segment(config.getConf('hfr:tenancyid'))
+      .segment('Location')
+      .addQuery('_id', parent)
+      .addQuery('_include:recurse', 'Location:partof')
+      .toString();
+    mcsd.executeURL(url, (parents) => {
+      if(!parents.entry) {
+        return callback()
+      }
+      let dvsParent
+      for(let entry of parents.entry) {
+        if(!entry.resource.type) {
+          continue
+        }
+        for(let type of entry.resource.type) {
+          for(let coding of type.coding) {
+            if(coding.system === '2.25.123494412831734081331965080571820180508' && coding.code == '4') {
+              dvsParent = entry.resource.id
+            }
+          }
+        }
+      }
+      if(dvsParent) {
+        let url = URI(config.getConf('mCSD:url'))
+          .segment(config.getConf('hfr:tenancyid'))
+          .segment('Location')
+          .addQuery('partof', dvsParent)
+          .addQuery('type', 'DVS')
+          .toString();
+        mcsd.executeURL(url, (dvs) => {
+          return callback(dvs)
+        })
+      } else {
+        return callback()
+      }
+    })
+  }
 });
 
 router.post('/addCodeSystem', (req, res) => {
@@ -939,6 +1162,7 @@ router.get('/syncHFRFacilities', (req, res) => {
           if (fhirLocation.entry.length === 0) {
             winston.info(`Facility ${facility.name} missing, adding request`);
             const building = createFacilityResource(facility);
+            building.id = uuid5(facility.id.toString(), '1457baa3-9860-4d29-8ac9-bc926d9bef47');
             building.meta.tag.push({
               code: 'NewFacility',
             });
@@ -950,7 +1174,6 @@ router.get('/syncHFRFacilities', (req, res) => {
               },
             });
           } else if (fhirLocation.entry.length === 2) {
-            winston.info(`Facility ${facility.name} has been updated, adding request`);
             const facilityResource = fhirLocation.entry.find(entry => entry.search.mode === 'match');
             const parentResource = fhirLocation.entry.find(entry => entry.search.mode === 'include');
             let facType;
@@ -961,7 +1184,7 @@ router.get('/syncHFRFacilities', (req, res) => {
                 }
                 for (const coding of type.coding) {
                   if (coding.system === 'http://hfrportal.ehealth.go.tz/facilityType') {
-                    facType = coding.code;
+                    facType = coding.display;
                   }
                 }
               }
@@ -970,20 +1193,34 @@ router.get('/syncHFRFacilities', (req, res) => {
             if (facility.properties.Admin_div) {
               adminDiv = facility.properties.Admin_div.split('-').pop().trim();
             }
+
+            let HFRFacType = mixin.translateFacTypes(facility.properties.Fac_Type.toString().split('-'), facTypes.config.hierarchy);
+            let HFRFacTypeName;
+            if (!HFRFacType) {
+              HFRFacTypeName = facility.properties.Fac_Type;
+            } else {
+              HFRFacTypeName = HFRFacType.name;
+            }
+
             if (facility.name !== facilityResource.resource.name
-              || facility.properties.Fac_Type !== facType
+              || HFRFacTypeName !== facType
               || adminDiv !== parentResource.resource.name
             ) {
+              winston.info(`Facility ${facility.name} has been updated, adding request`);
               const building = createFacilityResource(facility);
-              building.id = facilityResource.resource.id;
+              building.id = uuid5(facility.id.toString(), '1457baa3-9860-4d29-8ac9-bc926d9bef47');
               building.meta.tag.push({
                 code: 'UpdatedFacility',
+              });
+              building.meta.tag.push({
+                code: facilityResource.resource.id,
+                display: 'Original UUID'
               });
               fhir.entry.push({
                 resource: building,
                 request: {
                   method: 'PUT',
-                  url: `Location/${facilityResource.resource.id}`,
+                  url: `Location/${building.id}`,
                 },
               });
             }
@@ -1038,16 +1275,17 @@ router.get('/syncHFRFacilities', (req, res) => {
       id: uuid5(facility.id.toString(), '7ee93e32-78da-4913-82f8-49eb0a618cfc'),
       resourceType: 'Location',
       meta: {
-        tag: [{
-          code: 'Admin_div',
-          display: facility.properties.Admin_div,
-        }],
+        tag: [],
         profile: [
           'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_Location',
           'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_FacilityLocation',
         ],
       },
       name: facility.name,
+      extension: [{
+        "url": "Admin_div",
+        "valueString": facility.properties.Admin_div
+      }],
       identifier: [{
         type: {
           text: 'id',
@@ -1136,6 +1374,7 @@ router.get('/syncHFRAdminAreas', (req, res) => {
         if (fhirLocation.entry.length === 0) {
           winston.info(`${adminArea.name} missing`);
           const jurisdiction = buildJurisdiction(adminArea, 'NewJurisdiction');
+          jurisdiction.id = uuid5(adminArea.id + jurisdiction.name, '1457baa3-9860-4d29-8ac9-bc926d9bef47');
           fhir.entry.push({
             resource: jurisdiction,
             request: {
@@ -1151,7 +1390,11 @@ router.get('/syncHFRAdminAreas', (req, res) => {
             winston.info(`${adminArea.name} Updated inside HFR, adding request`);
             winston.info(`${adminArea.name} Parent Changed`);
             const jurisdiction = buildJurisdiction(adminArea, 'UpdatedJurisdiction', parentJur.resource.id);
-            jurisdiction.id = originalResource.resource.id;
+            jurisdiction.id = uuid5(adminArea.id + jurisdiction.name, '1457baa3-9860-4d29-8ac9-bc926d9bef47');
+            jurisdiction.meta.tag.push({
+              code: originalResource.resource.id,
+              display: 'Original UUID'
+            });
             fhir.entry.push({
               resource: jurisdiction,
               request: {
@@ -1197,7 +1440,7 @@ router.get('/syncHFRAdminAreas', (req, res) => {
 
     function buildJurisdiction(adminArea, tagDetails, id) {
       if (!id) {
-        id = uuid5(adminArea.id.toString(), '7ee93e32-78da-4913-82f8-49eb0a618cfc');
+        id = uuid5(adminArea.id.toString() + adminArea.name, '7ee93e32-78da-4913-82f8-49eb0a618cfc');
       }
       const level = adminArea.id.split('.').length - 1;
       const jurisdiction = {
@@ -1206,18 +1449,19 @@ router.get('/syncHFRAdminAreas', (req, res) => {
         meta: {
           tag: [{
             code: tagDetails,
-          }, {
-            code: 'parentName',
-            display: adminArea.parentName,
-          }, {
-            code: 'parentID',
-            display: adminArea.parentID,
           }],
           profile: [
             'http://ihe.net/fhir/StructureDefinition/IHE_mCSD_Location',
           ],
         },
         name: adminArea.name,
+        extension: [{
+          "url": "parentName",
+          "valueString": adminArea.parentName
+        }, {
+          "url": "parentID",
+          "valueString": adminArea.parentID
+        }],
         identifier: [{
           type: {
             text: 'code',
@@ -1339,7 +1583,9 @@ function parseLocationResource(building, database, callback) {
     row.website = website.value;
   }
   row.description = building.resource.description;
-  const adminDiv = building.resource.meta && building.resource.meta.tag && building.resource.meta.tag.find(tag => tag.code === 'Admin_div');
+  const adminDiv = building.resource.extension && building.resource.extension.find((ext) => {
+    return ext.url === 'Admin_div'
+  })
   let hfrcode;
   let hfrid;
   for (const identifier of building.resource.identifier) {
@@ -1352,12 +1598,12 @@ function parseLocationResource(building, database, callback) {
   }
   row.hfrcode = hfrcode;
   row.hfrid = hfrid;
-  if (adminDiv && adminDiv.display) {
-    row.parent = adminDiv.display;
+  if (adminDiv) {
+    row.parent = adminDiv.valueString;
   }
   async.series({
     getParent: (callback) => {
-      if (row.parent) {
+      if (row.parent || !building.resource.partOf) {
         return callback(null);
       }
       const url = URI(config.getConf('mCSD:url'))

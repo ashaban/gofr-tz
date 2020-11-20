@@ -37,6 +37,7 @@
             color="red"
             class="mb-0"
           ></v-progress-linear>
+          Parent In HFR {{acceptingItem.parent}}
         </v-card-text>
         <v-card-actions>
           <v-btn
