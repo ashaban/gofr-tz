@@ -350,8 +350,10 @@ router.get('/getJurisdictionsMissingFromHFR', (req, res) => {
           row.status.code = status;
         }
       }
-      const adminDiv = jurisdiction.resource.meta.tag.find(tag => tag.code === 'parentName');
-      row.parent = adminDiv.display;
+      const adminDiv = jurisdiction.resource.extension && jurisdiction.resource.extension.find((ext) => {
+        return ext.url === 'parentName'
+      })
+      row.parent = adminDiv.valueString;
       jurisdictionsTable.push(row);
       return nxtJurisdiction();
     }, () => {
@@ -404,9 +406,11 @@ router.get('/getJurisdictionsUpdatedFromHFR', (req, res) => {
           row.status.code = status;
         }
       }
-      const adminDiv = jurisdiction.resource.meta && jurisdiction.resource.meta.tag.find(tag => tag.code === 'parentName');
+      const adminDiv = jurisdiction.resource.extension && jurisdiction.resource.extension.find((ext) => {
+        return ext.url === 'parentName'
+      })
       if(adminDiv) {
-        row.parent = adminDiv.display;
+        row.parent = adminDiv.valueString;
       }
       if(row.name) {
         jurisdictionsTable.push(row);
@@ -649,7 +653,7 @@ router.post('/updateFromHFR', (req, res) => {
   let errorOccured = false;
   const form = new formidable.IncomingForm();
   form.parse(req, (err, fields) => {
-    const { id, ouuid, parent, parentLevel } = fields;
+    let { id, ouuid, parent, parentLevel } = fields;
     const reqDB = config.getConf('updaterequests:tenancyid');
     let originalResource = {}
     let hfrResource = {}
@@ -715,6 +719,9 @@ router.post('/updateFromHFR', (req, res) => {
         })
       },
       checkDVS: (callback) => {
+        if(!parentLevel) {
+          return callback(null)
+        }
         winston.info('Checking if DVS should be created')
         let originalLevel
         for(let type of originalResource.resource.type) {
@@ -870,7 +877,7 @@ router.post('/addFromHFR', (req, res) => {
   let errorOccured = false;
   const form = new formidable.IncomingForm();
   form.parse(req, (err, fields) => {
-    const { id, parent } = fields;
+    const { id, parent, parentLevel } = fields;
     const database = config.getConf('updaterequests:tenancyid');
     mcsd.getLocationByID(database, id, false, (location) => {
       let deletedIndex = 0;
@@ -920,7 +927,7 @@ router.post('/addFromHFR', (req, res) => {
           deletedIndex += 1;
         }
       }
-      let isFacility = location.entry[0].resource.type.find((typ) => {
+      const isFacility = location.entry[0].resource.type.find((typ) => {
         return typ.coding && typ.coding.find((coding) => {
           return coding.code === 'urn:ihe:iti:mcsd:2019:facility'
         })
@@ -944,7 +951,6 @@ router.post('/addFromHFR', (req, res) => {
           locID += location.entry[0].resource.name
         }
       }
-      winston.error(locID)
       location.entry[0].resource.id = uuid5(locID.toString(), '7ee93e32-78da-4913-82f8-49eb0a618cfc')
       location.entry[0].resource.partOf = {
         reference: `Location/${parent}`,
@@ -961,6 +967,7 @@ router.post('/addFromHFR', (req, res) => {
             }
           })
         }
+
         const bundle = {
           resourceType: 'Bundle',
           type: 'batch',
@@ -972,23 +979,48 @@ router.post('/addFromHFR', (req, res) => {
             },
           }],
         };
-        mcsd.saveLocations(bundle, '', (err, body) => {
-          if (err) {
-            winston.error(err);
-            errorOccured = true;
-            return res.status(500).send();
+        let promise1 = new Promise((resolve) => {
+          if(isFacility || parseInt(parentLevel) !== 3) {
+            return resolve()
           }
-          winston.info('Location saved successfully');
-          winston.info('Deleting location from HFR cache');
-          mcsd.deleteResource({
-            database,
-            resource: 'Location',
-            id,
-          }, () => {
-            winston.info('Delete operation completed');
-            res.status(201).send();
+          winston.info('Generating DVS')
+          let url = URI(config.getConf('mCSD:url'))
+            .segment(config.getConf('hfr:tenancyid'))
+            .segment('Location')
+            .addQuery('partof', location.entry[0].resource.id)
+            .addQuery('type', 'DVS')
+            .toString();
+          mcsd.executeURL(url, (fhirDVS) => {
+            if(fhirDVS.entry.length === 0) {
+              let DVSResources = mixin.generateDVS(location.entry[0].resource.name, location.entry[0].resource.id);
+              winston.error(JSON.stringify(DVSResources,0,2));
+              bundle.entry = bundle.entry.concat(DVSResources)
+            } else {
+              winston.info('DVS exists, not creating')
+            }
+            return resolve();
+          })
+        })
+        promise1.then(() => {
+          winston.error(JSON.stringify(bundle,0,2));
+          mcsd.saveLocations(bundle, '', (err, body) => {
+            if (err) {
+              winston.error(err);
+              errorOccured = true;
+              return res.status(500).send();
+            }
+            winston.info('Location saved successfully');
+            winston.info('Deleting location from HFR cache');
+            mcsd.deleteResource({
+              database,
+              resource: 'Location',
+              id,
+            }, () => {
+              winston.info('Delete operation completed');
+              res.status(201).send();
+            });
           });
-        });
+        })
       })
     });
   });

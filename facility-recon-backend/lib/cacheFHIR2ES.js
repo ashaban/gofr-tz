@@ -9,7 +9,7 @@ const { CacheFhirToES } = require('fhir2es')
 
 const cacheFHIR = () => {
   return new Promise((resolve) => {
-    let tenancies = ['hfr', 'vims']
+    let tenancies = ['hfr', 'vims', 'dhis2']
     getLastIndexingTime().then((lastUpdateTime) => {
       async.eachSeries(tenancies, (tenancy, nxt) => {
         let tenancyID = config.getConf(`${tenancy}:tenancyid`)

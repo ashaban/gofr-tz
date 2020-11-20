@@ -47,12 +47,10 @@ export const dataSourcePairMixin = {
           'Content-Type': 'multipart/form-data'
         }
       }).then((response) => {
-        this.$store.state.levelMapping.source1 = JSON.parse(response.data).levelMapping1
-        this.$store.state.levelMapping.source2 = JSON.parse(response.data).levelMapping2
+        this.$store.state.dynamicProgress = false
         eventBus.$emit('getDataSourcePair')
         // this.alertSuccess = true
         // this.alertMsg = 'Data Source Pair Saved Successfully'
-        this.$store.state.dynamicProgress = false
       }).catch((error) => {
         this.alertError = true
         this.$store.state.dialogError = true

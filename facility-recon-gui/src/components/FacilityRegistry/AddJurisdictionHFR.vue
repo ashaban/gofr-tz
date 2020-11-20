@@ -37,6 +37,7 @@
             color="red"
             class="mb-0"
           ></v-progress-linear>
+          Parent In HFR {{acceptingItem.parent}}
         </v-card-text>
         <v-card-actions>
           <v-btn
@@ -213,6 +214,7 @@ export default {
       let formData = new FormData()
       formData.append('id', this.acceptingItem.id)
       formData.append('parent', this.activeJurisdiction.id)
+      formData.append('parentLevel', this.activeJurisdiction.data.level)
       axios.post(backendServer + '/FR/addFromHFR', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'

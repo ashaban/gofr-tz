@@ -96,16 +96,16 @@ module.exports = function () {
         },
       };
       return [{
-        resource: dvs,
-        request: {
-          method: 'PUT',
-          url: `Location/${dvs.id}`,
-        },
-      }, {
         resource: orgDVS,
         request: {
           method: 'PUT',
           url: `Organization/${orgDVS.id}`,
+        },
+      }, {
+        resource: dvs,
+        request: {
+          method: 'PUT',
+          url: `Location/${dvs.id}`,
         },
       }]
     },

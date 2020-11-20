@@ -16,6 +16,7 @@ const os = require('os');
 const fs = require('fs');
 const request = require('request');
 const axios = require('axios')
+const cacheFHIR2ES = require('./cacheFHIR2ES')
 const Cryptr = require('cryptr');
 const fsFinder = require('fs-finder');
 const bcrypt = require('bcrypt');
@@ -194,6 +195,7 @@ if (cluster.isMaster) {
 
     winston.info('Adding default data sources')
     let dataSources = [{
+      id: '5fa2180a3997bc68fd85b12c',
       name: 'vims',
       host: '',
       sourceType: 'upload',
@@ -203,6 +205,7 @@ if (cluster.isMaster) {
       username: '',
       password: ''
     }, {
+      id: '5fa2249bb25305245d773351',
       name: 'hfr',
       host: '',
       sourceType: 'upload',
@@ -211,16 +214,71 @@ if (cluster.isMaster) {
       shareToAll: true,
       username: '',
       password: ''
+    }, {
+      id: '5fabcfbf3111c70c57c6dd18',
+      name: 'dhis2',
+      host: 'https://hisptz.com/dhis/',
+      sourceType: 'DHIS2',
+      source: 'syncServer',
+      userID: '5dd2b3a0064c5303fe0bcb4c',
+      shareToAll: true,
+      username: 'timri_data_upload',
+      password: '04531e2afaa20916efcd3c31755f9d0b76cd'
     }]
-    for(let datasource of dataSources) {
+    async.each(dataSources, (datasource, nxt) => {
       mongo.addDataSource(datasource, (err, response) => {
         if (err) {
           winston.error(err);
         } else {
           winston.info('Default data source saved successfully');
         }
+        return nxt()
       });
-    }
+    }, () => {
+      winston.info('Adding data source pairs');
+      let pairs =[{
+        source1: {
+          _id: "5fabcfbf3111c70c57c6dd18",
+          userID: {
+            _id: "5dd2b3a0064c5303fe0bcb4c",
+            userName: "root@gofr.org"
+          },
+        },
+        source2: {
+          _id: "5fa2249bb25305245d773351",
+          userID: {
+            _id: "5dd2b3a0064c5303fe0bcb4c",
+            userName: "root@gofr.org"
+          },
+        },
+        userID: "5dd2b3a0064c5303fe0bcb4c",
+        orgId: "",
+        status: 'inactive'
+      }, {
+        source1: {
+          _id: "5fa2180a3997bc68fd85b12c",
+          userID: {
+            _id: "5dd2b3a0064c5303fe0bcb4c",
+            userName: "root@gofr.org"
+          },
+        },
+        source2: {
+          _id: "5fa2249bb25305245d773351",
+          userID: {
+            _id: "5dd2b3a0064c5303fe0bcb4c",
+            userName: "root@gofr.org"
+          },
+        },
+        userID: "5dd2b3a0064c5303fe0bcb4c",
+        orgId: "",
+        status: 'active'
+      }]
+      for(let pair of pairs) {
+        mongo.addDataSourcePair(pair, () => {
+
+        })
+      }
+    })
 
     //create ES HFR index
     es.createESIndex('hfrfacilities', ['id', 'code', 'uuid'], [{name: 'name', type: 'text'}], () => {})
@@ -3418,39 +3476,21 @@ if (cluster.isMaster) {
       } catch (error) {
         winston.error(error);
       }
-      const database = mixin.toTitleCase(JSON.parse(fields.source1).name) + JSON.parse(fields.source1).userID._id + mixin.toTitleCase(JSON.parse(fields.source2).name);
-      hapi.createServer(database, (err) => {
-        if (err) {
+      fields.status = 'active'
+      fields.source1 = JSON.parse(fields.source1)
+      fields.source2 = JSON.parse(fields.source2)
+      mongo.addDataSourcePair(fields, (error, errMsg, results) => {
+        if (error) {
+          if (errMsg) {
+            winston.error(errMsg);
+          } else {
+            winston.error(error);
+          }
           return res.status(400).json({
-            error: 'An expected error occured',
+            error: errMsg,
           });
         }
-        mongo.addDataSourcePair(fields, (error, errMsg, results) => {
-          if (error) {
-            if (errMsg) {
-              winston.error(errMsg);
-            } else {
-              winston.error(error);
-            }
-            res.status(400).json({
-              error: errMsg,
-            });
-          } else {
-            const db1 = mixin.toTitleCase(JSON.parse(fields.source1).name) + JSON.parse(fields.source1).userID._id;
-            const db2 = mixin.toTitleCase(JSON.parse(fields.source2).name) + JSON.parse(fields.source2).userID._id;
-            async.series({
-              levelMapping1(callback) {
-                mongo.getLevelMapping(db1, levelMapping => callback(null, levelMapping));
-              },
-              levelMapping2(callback) {
-                mongo.getLevelMapping(db2, levelMapping => callback(null, levelMapping));
-              },
-            }, (err, mappings) => {
-              winston.info('Data source pair saved successfully');
-              res.status(200).json(JSON.stringify(mappings));
-            });
-          }
-        });
+        res.status(200).json();
       });
     });
   });
@@ -3704,4 +3744,5 @@ if (cluster.isMaster) {
 
   server.listen(config.getConf('server:port'));
   winston.info(`Server is running and listening on port ${config.getConf('server:port')}`);
+  cacheFHIR2ES.cacheFHIR()
 }

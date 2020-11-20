@@ -210,6 +210,7 @@ module.exports = function () {
             password = this.encrypt(fields.password);
           }
           const syncServer = new models.DataSourcesModel({
+            _id: fields.id,
             name: fields.name,
             host: fields.host,
             sourceType: fields.sourceType,
@@ -486,7 +487,6 @@ module.exports = function () {
           callback(err, data);
         });
     },
-
     addDataSourcePair(sources, callback) {
       let createPair = true;
       let errMsg;
@@ -500,7 +500,7 @@ module.exports = function () {
             if (sources.activePairID && createPair) {
               this.deActivateSharedPair(sources.activePairID, sources.userID, (err, data) => callback(err, data));
             } else {
-              return callback(false, false);
+              return callback(null, false);
             }
           },
 
@@ -508,7 +508,7 @@ module.exports = function () {
             if (createPair) {
               this.deActivatePairs(sources.userID, (err, data) => callback(err, data));
             } else {
-              return callback(false, false);
+              return callback(null, false);
             }
           },
         }, (error, results) => {
@@ -525,8 +525,8 @@ module.exports = function () {
       });
 
       function add(sources, createPair, callback) {
-        const source1 = JSON.parse(sources.source1);
-        const source2 = JSON.parse(sources.source2);
+        const source1 = sources.source1
+        const source2 = sources.source2
         models.DataSourcePairModel.findOneAndUpdate({
           source1: source1._id,
           source2: source2._id,
@@ -535,7 +535,7 @@ module.exports = function () {
           source1: source1._id,
           source2: source2._id,
           orgId: sources.orgId,
-          status: 'active',
+          status: sources.status,
         }, (err, data) => {
           if (err) {
             return callback(err, false);

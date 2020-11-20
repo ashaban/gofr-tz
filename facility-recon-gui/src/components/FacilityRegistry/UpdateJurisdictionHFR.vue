@@ -259,8 +259,8 @@ export default {
       formData.append('ouuid', this.acceptingItem.ouuid)
       if (!this.keepParent) {
         formData.append('parent', this.activeJurisdiction.id)
+        formData.append('parentLevel', this.activeJurisdiction.data.level)
       }
-      formData.append('parentLevel', this.activeJurisdiction.data.level)
       axios.post(backendServer + '/FR/updateFromHFR', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
