@@ -1,0 +1,93 @@
+[
+  {
+    "url": "http://mHero.org/fhir/ImplementationGuide/mhero",
+    "id": "mhero",
+    "type": "ImplementationGuide",
+    "version": "0.1.0",
+    "name": "mHeroImplementationGuide"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-comm-flow-run",
+    "id": "mhero-comm-flow-run",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroCommFlowRun"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-comm-req-broadcast-starts",
+    "id": "mhero-comm-req-broadcast-starts",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroCommReqBroadcastStarts"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-comm-req-flow-starts",
+    "id": "mhero-comm-req-flow-starts",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroCommReqFlowStarts"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-communication",
+    "id": "mhero-communication",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroCommunication"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-communication-request",
+    "id": "mhero-communication-request",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroCommunicationRequest"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-eidsr-patient",
+    "id": "mhero-eidsr-patient",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroeIDSRPatient"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-eidsr-suspected-case",
+    "id": "mhero-eidsr-suspected-case",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroeIDSRSuspectedCase"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-flow-run",
+    "id": "mhero-flow-run",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroFlowRun"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-flow-run-details",
+    "id": "mhero-flow-run-details",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroFlowRunDetails"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-run-summary",
+    "id": "mhero-run-summary",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroRunSummary"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-workflows",
+    "id": "mhero-workflows",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroWorkflows"
+  },
+  {
+    "url": "http://mHero.org/fhir/StructureDefinition/mhero-workflows-details",
+    "id": "mhero-workflows-details",
+    "type": "StructureDefinition",
+    "version": "0.1.0",
+    "name": "MheroWorkflowsDetails"
+  }
+]

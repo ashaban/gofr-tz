@@ -238,10 +238,12 @@ export default {
           return false
         }
         if (vm.jurisdictionParent.data && parseInt(vm.jurisdictionParent.data.level) + 2 !== codeLength) {
+          console.log('here1');
           return false
         } else if (vm.jurisdictionParent.code) {
           let parCodeLength = vm.jurisdictionParent.code.split('.').length
           if (parCodeLength + 1 !== codeLength) {
+            console.log(parCodeLength + ' ' + codeLength)
             return false
           }
         }

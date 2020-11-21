@@ -1,0 +1,66 @@
+@prefix fhir: <http://hl7.org/fhir/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# - resource -------------------------------------------------------------------
+
+<http://mHero.org/fhir/Patient/a4g95gd4-64ce-69d8-94f3-48ed235e3388> a fhir:Patient;
+  fhir:nodeRole fhir:treeRoot;
+  fhir:Resource.id [ fhir:value "a4g95gd4-64ce-69d8-94f3-48ed235e3388"];
+  fhir:Resource.meta [
+     fhir:Meta.profile [
+       fhir:value "http://mHero.org/fhir/StructureDefinition/mhero-eidsr-patient";
+       fhir:index 0;
+       fhir:link <http://mHero.org/fhir/StructureDefinition/mhero-eidsr-patient>
+     ]
+  ];
+  fhir:DomainResource.text [
+     fhir:Narrative.status [ fhir:value "generated" ];
+     fhir:Narrative.div "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p><b>Generated Narrative</b></p><p><b>id</b>: a4g95gd4-64ce-69d8-94f3-48ed235e3388</p><p><b>meta</b>: </p><p><b>gender</b>: male</p></div>"
+  ];
+  fhir:DomainResource.extension [
+     fhir:index 0;
+     fhir:Element.extension [
+       fhir:index 0;
+       fhir:Extension.url [ fhir:value "diseaseCode" ];
+       fhir:Extension.valueString [ fhir:value "covid19" ]
+     ], [
+       fhir:index 1;
+       fhir:Extension.url [ fhir:value "reporterID" ];
+       fhir:Extension.valueReference [
+         fhir:link <http://mHero.org/fhir/Practitioner/3fbb96d3-bb8a-41c6-b1a4-8f4f11460899>;
+         fhir:Reference.reference [ fhir:value "Practitioner/3fbb96d3-bb8a-41c6-b1a4-8f4f11460899" ]
+       ]
+     ], [
+       fhir:index 2;
+       fhir:Extension.url [ fhir:value "age" ];
+       fhir:Extension.valueInteger [ fhir:value "32"^^xsd:integer ]
+     ], [
+       fhir:index 3;
+       fhir:Extension.url [ fhir:value "caseID" ];
+       fhir:Extension.valueString [ fhir:value "LB-MND" ]
+     ], [
+       fhir:index 4;
+       fhir:Extension.url [ fhir:value "specimenCollected" ];
+       fhir:Extension.valueBoolean [ fhir:value "true"^^xsd:boolean ]
+     ], [
+       fhir:index 5;
+       fhir:Extension.url [ fhir:value "communityDetection" ];
+       fhir:Extension.valueBoolean [ fhir:value "true"^^xsd:boolean ]
+     ], [
+       fhir:index 6;
+       fhir:Extension.url [ fhir:value "internationalTravel" ];
+       fhir:Extension.valueBoolean [ fhir:value "false"^^xsd:boolean ]
+     ];
+     fhir:Extension.url [ fhir:value "http://mHero.org/fhir/StructureDefinition/mhero-eidsr-suspected-case" ]
+  ];
+  fhir:Patient.gender [ fhir:value "male"] .
+
+# - ontology header ------------------------------------------------------------
+
+<http://mHero.org/fhir/Patient/a4g95gd4-64ce-69d8-94f3-48ed235e3388.ttl> a owl:Ontology;
+  owl:imports fhir:fhir.ttl .
+
+# -------------------------------------------------------------------------------------
+

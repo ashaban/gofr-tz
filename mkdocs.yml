@@ -1,0 +1,62 @@
+# Project information
+site_name: 'Administrative Area App Documentation'
+site_description: 'Technical documentation for administrative area app'
+site_author: 'Ally Shaban'
+site_url: 'https://github.com/ashaban/gofr-tz'
+
+# Repository
+repo_name: 'ashaban/gofr-tz'
+repo_url: 'https://github.com/ashaban/gofr-tz'
+
+# Theme
+theme:
+  name: 'material'
+  palette:
+    primary: 'blue grey'
+    accent: 'indigo'
+  language: 'en'
+  features:
+    - navigation.tabs
+  font:
+    text: 'Roboto'
+    code: 'Roboto Mono'
+
+nav:
+  - Overview:
+      - 'index.md'
+  - Developer Manual:
+    - 'dev/installation.md'
+  - User Manual:
+    - 'user/new_admin_area.md'
+    - 'user/new_facility.md'
+    - 'user/update_admin_area_from_hfr.md'
+    - 'user/update_facility_from_hfr.md'
+    - 'user/add_admin_area_from_hfr.md'
+    - 'user/add_facility_from_hfr.md'
+    - 'user/facilities_report.md'
+    - 'user/admin_area_report.md'
+    - 'user/dvs_report.md'
+
+markdown_extensions:
+  - admonition
+  - codehilite:
+      guess_lang: false
+  - toc:
+      toc_depth: '1-1'
+  - footnotes
+
+# https://github.com/zhaoterryy/mkdocs-pdf-export-plugin not working
+plugins:
+  - search
+  - git-revision-date-localized
+  # - pdf-export:
+  #     combined: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/intrahealth/emNutt
+# theme:
+# logo: 'images/logo.png' must be 128x128
+# logo:
+#   icon: 'menu_book'

@@ -190,7 +190,7 @@
                 >
                   <v-flex>
                     <b>
-                      <center>Facilities Under {{activeJurisdiction.text}}</center>
+                      <center>DVS Under {{activeJurisdiction.text}}</center>
                     </b>
                   </v-flex>
                   <v-spacer></v-spacer>

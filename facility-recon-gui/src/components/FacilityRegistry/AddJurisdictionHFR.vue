@@ -9,7 +9,7 @@
         dark
       >
         <v-toolbar-title>
-          Accepting HFR Admin Area
+          Accepting HFR Admin Area - {{acceptingItem.name}}
         </v-toolbar-title>
         <v-spacer></v-spacer>
         <v-btn
@@ -62,7 +62,7 @@
           wrap
         >
           <v-flex>
-            HFR Admin Area Missing Inside Openinfoman
+            HFR Admin Area Missing Inside Admin Area App
           </v-flex>
           <v-spacer></v-spacer>
           <v-flex>

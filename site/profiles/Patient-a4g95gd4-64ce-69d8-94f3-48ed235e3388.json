@@ -1,0 +1,51 @@
+{
+  "resourceType": "Patient",
+  "id": "a4g95gd4-64ce-69d8-94f3-48ed235e3388",
+  "meta": {
+    "profile": [
+      "http://mHero.org/fhir/StructureDefinition/mhero-eidsr-patient"
+    ]
+  },
+  "text": {
+    "status": "generated",
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p><b>Generated Narrative</b></p><p><b>id</b>: a4g95gd4-64ce-69d8-94f3-48ed235e3388</p><p><b>meta</b>: </p><p><b>gender</b>: male</p></div>"
+  },
+  "extension": [
+    {
+      "extension": [
+        {
+          "url": "diseaseCode",
+          "valueString": "covid19"
+        },
+        {
+          "url": "reporterID",
+          "valueReference": {
+            "reference": "Practitioner/3fbb96d3-bb8a-41c6-b1a4-8f4f11460899"
+          }
+        },
+        {
+          "url": "age",
+          "valueInteger": 32
+        },
+        {
+          "url": "caseID",
+          "valueString": "LB-MND"
+        },
+        {
+          "url": "specimenCollected",
+          "valueBoolean": true
+        },
+        {
+          "url": "communityDetection",
+          "valueBoolean": true
+        },
+        {
+          "url": "internationalTravel",
+          "valueBoolean": false
+        }
+      ],
+      "url": "http://mHero.org/fhir/StructureDefinition/mhero-eidsr-suspected-case"
+    }
+  ],
+  "gender": "male"
+}

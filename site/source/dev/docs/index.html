@@ -1,0 +1,649 @@
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Technical documentation for administrative area app">
+      
+      
+        <link rel="canonical" href="https://github.com/ashaban/gofr-tz/source/dev/docs/">
+      
+      
+        <meta name="author" content="Ally Shaban">
+      
+      <link rel="shortcut icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.1.1, mkdocs-material-5.1.6">
+    
+    
+      
+        <title>Update and Build Documentation - Administrative Area App Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.4b9ffd7b.min.css">
+      
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.b79bcd20.min.css">
+      
+      
+        
+        
+        <meta name="theme-color" content="#546e7a">
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    <body dir="ltr" data-md-color-primary="blue-grey" data-md-color-accent="indigo">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#update-and-build-documentation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="https://github.com/ashaban/gofr-tz" title="Administrative Area App Documentation" class="md-header-nav__button md-logo" aria-label="Administrative Area App Documentation">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            Administrative Area App Documentation
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              Update and Build Documentation
+            
+          </span>
+        </div>
+      
+    </div>
+    
+      <label class="md-header-nav__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" data-md-state="active">
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0116 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 019.5 16 6.5 6.5 0 013 9.5 6.5 6.5 0 019.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <button type="reset" class="md-search__icon md-icon" aria-label="Clear" data-md-component="search-reset" tabindex="-1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header-nav__source">
+        
+<a href="https://github.com/ashaban/gofr-tz/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ashaban/gofr-tz
+  </div>
+</a>
+      </div>
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="https://github.com/ashaban/gofr-tz" title="Administrative Area App Documentation" class="md-nav__button md-logo" aria-label="Administrative Area App Documentation">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 003-3 3 3 0 00-3-3 3 3 0 00-3 3 3 3 0 003 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    Administrative Area App Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      
+<a href="https://github.com/ashaban/gofr-tz/" title="Go to repository" class="md-source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05L244 40.45a28.87 28.87 0 00-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 01-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 000 40.81l195.61 195.6a28.86 28.86 0 0040.8 0l194.69-194.69a28.86 28.86 0 000-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ashaban/gofr-tz
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-1" type="checkbox" id="nav-1">
+    
+    <label class="md-nav__link" for="nav-1">
+      Overview
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="Overview" data-md-level="1">
+      <label class="md-nav__title" for="nav-1">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        Overview
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../.." title="Welcome to BID Administrative Area App" class="md-nav__link">
+      Welcome to BID Administrative Area App
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-2" type="checkbox" id="nav-2">
+    
+    <label class="md-nav__link" for="nav-2">
+      Developer Manual
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="Developer Manual" data-md-level="1">
+      <label class="md-nav__title" for="nav-2">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        Developer Manual
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../dev/installation/" title="Installation" class="md-nav__link">
+      Installation
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-3" type="checkbox" id="nav-3">
+    
+    <label class="md-nav__link" for="nav-3">
+      User Manual
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="User Manual" data-md-level="1">
+      <label class="md-nav__title" for="nav-3">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        User Manual
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../user/new_admin_area/" title="New admin area" class="md-nav__link">
+      New admin area
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../user/new_facility/" title="New facility" class="md-nav__link">
+      New facility
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../user/update_admin_area_from_hfr/" title="Update admin area from hfr" class="md-nav__link">
+      Update admin area from hfr
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../user/update_facility_from_hfr/" title="Update facility from hfr" class="md-nav__link">
+      Update facility from hfr
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../user/add_admin_area_from_hfr/" title="Add admin area from hfr" class="md-nav__link">
+      Add admin area from hfr
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../user/add_facility_from_hfr/" title="Add facility from hfr" class="md-nav__link">
+      Add facility from hfr
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../user/facilities_report/" title="Facilities report" class="md-nav__link">
+      Facilities report
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../user/admin_area_report/" title="Admin area report" class="md-nav__link">
+      Admin area report
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="../../../user/dvs_report/" title="Dvs report" class="md-nav__link">
+      Dvs report
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                  <a href="https://github.com/ashaban/gofr-tz/edit/master/docs/source/dev/docs.md" title="Edit this page" class="md-content__button md-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+                  </a>
+                
+                
+                  
+                
+                
+                <h1 id="update-and-build-documentation">Update and Build Documentation</h1>
+<p>These docs are hosted at https://readthedocs.io. The documentation is built using Sphinx with Markdown support enabled. In order to translate, the documentation must first be in the base (English) language. Upon a successful build, the translatable files (.pot) are then pushed to <a href="https://www.transifex.com/">Transifex</a>. The pot files must be synchronized with Transifex for editors to use them.</p>
+<h2>Simple Build</h2>
+<p>Install prerequisites (see below). Then to do a build:</p>
+<div class="codehilite"><pre><span></span><code>make html
+</code></pre></div>
+
+
+<h2>Sphinx Extensions</h2>
+<p>Python extensions are required to build the docs, including <code>sphinx_markdown_tables</code> for tables to render. The <code>.readthedocs.yaml</code> file in the root of the repo sets which version of Python (3.7) and the location of the requirements file in <code>docs/requirements.txt</code>.</p>
+<p>For more on how markdown tables can render correctly see: https://pypi.org/project/sphinx-markdown-tables/</p>
+<h2>Update Sources for Translation</h2>
+<p>This is from the <a href="https://docs.readthedocs.io/en/latest/guides/manage-translations.html#update-sources-to-be-translated">rtd docs</a> with minor changes for folder names.</p>
+<p>This should be done if content changes in the base language documentation.</p>
+<p>Create the <code>.pot</code> files. </p>
+<div class="codehilite"><pre><span></span><code>cd docs
+sphinx-build -b gettext source build/gettext -l fr
+sphinx-intl update -p build/gettext -l fr
+</code></pre></div>
+
+
+<p>If a page is created it needs to be added to <code>.tx/config</code> by using <code>tx init</code> mapping and then pushed to Transifex. For example</p>
+<div class="codehilite"><pre><span></span><code># try
+tx config mapping --resource facility-recon.docs_build_gettext_dev_dhis2users \
+--source-lang en --type PO --source-file docs/build/gettext/dev/dhis2users.pot \
+--expression &#39;docs/source/locales/&lt;lang&gt;/LC_MESSAGES/dev/dhis2users.po&#39;
+# add --execute to do it if all looks well
+tx config mapping --resource facility-recon.docs_build_gettext_dev_dhis2users \
+--source-lang en --type PO --source-file docs/build/gettext/dev/dhis2users.pot \
+--expression &#39;docs/source/locales/&lt;lang&gt;/LC_MESSAGES/dev/dhis2users.po&#39; --execute
+</code></pre></div>
+
+
+<p>Push files to Transifex.</p>
+<div class="codehilite"><pre><span></span><code>tx push -tl fr
+</code></pre></div>
+
+
+<h2>Build Documentation from New Translations</h2>
+<div class="codehilite"><pre><span></span><code>tx pull -l fr
+</code></pre></div>
+
+
+<p>Next git add, commit, push the changes to the repository master branch. Then rebuild the English and French projects on readthedocs.org.</p>
+<h2>Update Base (English) Documentation</h2>
+<blockquote>
+<p>Note: Python 3.x is expect in the Makefile.</p>
+</blockquote>
+<p>Install prerequisites:</p>
+<div class="codehilite"><pre><span></span><code>pip install sphinx
+pip install recommonmark
+pip install sphinx_rtd_theme
+pip install sphinx-intl
+pip install transifex-client
+pip install sphinx_markdown_tables
+</code></pre></div>
+
+
+<p>Clone the respository, create a branch, and enter the docs directory. (If you are not a maintainer, please fork, branch, then send a pull request.)</p>
+<div class="codehilite"><pre><span></span><code>git clone https://github.com/openhie/facility-recon.git
+<span class="nb">cd</span> facility-recon/docs
+</code></pre></div>
+
+
+<p>Build the documentation. There is no need to commit documentation builds. The <code>.gitignore</code> includes the built documentation so built docs will not be committed by default. readthedocs builds the hosted documentation itself.</p>
+<p>Build docs in default (English) language.</p>
+<div class="codehilite"><pre><span></span><code>make html
+</code></pre></div>
+
+
+<p>Built docs will go in the <code>/docs/build</code> directory. Open <code>/docs/build/index.html</code> in a browser to see the built docs.</p>
+<h2>Transifex Setup</h2>
+<p>Transifex provides an accessible interface for contributors to enter and correct translations. The workflow is explained at <a href="https://docs.readthedocs.io/en/latest/guides/manage-translations.html">readthedocs</a>.</p>
+<p>Setup an account on transifex.com. Be added to the OpenHIE organization for facility-recon project. Obtain a token in user settings and initialize transifex command line client. You do not need to <code>tx init</code> the directly, as the <code>.tx/config</code> should be version control. Setup a $TFX_TOKEN environment variable for yourself.</p>
+<h2>Create Translation Intermediate Files for New Languages</h2>
+<p>In the /docs directory, create the locale files. Use the appropriate <a href="http://www.sphinx-doc.org/en/master/usage/configuration.html#confval-language">locale</a>. Note that Sphinx supports less locales than Transifex.</p>
+<div class="codehilite"><pre><span></span><code>sphinx-intl update -p build/gettext -l es
+</code></pre></div>
+
+
+<h2>How Localization was done (Do Not Reproduce)</h2>
+<p>Do not replicate this process. It is here to document how it was done in the first place. Doing it again would delete or write over translations or remove them.</p>
+<ul>
+<li>Setup Sphinx for the project. Enable Markdown support. Setup readthedocs.org. Enable the webhook to trigger builds.</li>
+<li>Create the source language docs. </li>
+<li>Create projects in readthedocs.org for both the source language (facility-recon - no prefix/suffix) and the new one (facility-recon-fr)</li>
+<li>Set languages correctly on both projects.</li>
+<li>Assign the -fr project as a translation of the source. You must have two projects.</li>
+</ul>
+<p>Create gettest dir. <code>source</code> is required as the <code>conf.py</code> file is not in the docs directory.</p>
+<div class="codehilite"><pre><span></span><code>sphinx-build -b gettext <span class="nb">source</span> build/gettext
+</code></pre></div>
+
+
+<p>Create <code>.pot</code> files for French. This puts a locales directory in <code>/docs/source/</code> and creates files for every <code>.md</code> and <code>.rst</code> file.</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span> docs
+sphinx-intl update -p build/gettext -l fr
+</code></pre></div>
+
+
+<p>Init Transifex support for the repo. Do it from the repo root, not docs. Add a Transifex API token env var prior to doing this.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># must be in repo root</span>
+<span class="nb">cd</span> ../
+tx init --token <span class="nv">$TFX_TOKEN</span> --no-interactive
+</code></pre></div>
+
+
+<p>Bulk-map all of the documents. This must be done in the root of the repo.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># must be in repo root</span>
+tx config mapping-bulk --project facility-recon --file-extension <span class="s1">&#39;.pot&#39;</span> --source-file-dir docs/build/gettext <span class="se">\</span>
+    --source-lang en --type PO --expression <span class="s1">&#39;docs/source/locales/&lt;lang&gt;/LC_MESSAGES/{filepath}/{filename}.po&#39;</span> --execute
+</code></pre></div>
+
+
+<p>Do the initial push of the source language documents to Transifex.</p>
+<div class="codehilite"><pre><span></span><code>tx push --source
+</code></pre></div>
+
+
+<p>Test by translating and editing a few files on Transifex. Pull from Transifex.</p>
+<div class="codehilite"><pre><span></span><code>tx pull -l fr
+</code></pre></div>
+
+
+<p>Manually check the <code>.po</code> files translated to confirm the changes.</p>
+<p>Build locally to check. (FYI, this puts <code>.mo</code> files into the repo which could potentially be gitignored and removed.)</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span> docs
+sphinx-build -b html -D <span class="nv">language</span><span class="o">=</span>fr ./source build/html/fr
+</code></pre></div>
+
+
+<p>...then open the index.html in the built files for French to confirm.</p>
+<p>readthedocs.io should rebuild based on the existing webhook.</p>
+                
+                  
+                    
+
+<hr>
+<div class="md-source-date">
+  <small>
+    
+      Last update: November 21, 2020
+    
+  </small>
+</div>
+                  
+                
+              
+              
+                
+
+
+              
+            </article>
+          </div>
+        </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+  <div class="md-footer-social">
+    
+      
+      
+        
+        
+      
+      <a href="https://github.com/intrahealth/emNutt" target="_blank" rel="noopener" title="github.com" class="md-footer-social__link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+      </a>
+    
+  </div>
+
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="../../../assets/javascripts/vendor.a0c4167b.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.fb26dd1d.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: "../../..",
+          features: ["navigation.tabs"],
+          search: Object.assign({
+            worker: "../../../assets/javascripts/worker/search.37585f48.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
+</html>
