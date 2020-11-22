@@ -275,9 +275,7 @@
         </v-card>
       </v-dialog>
       <v-layout row>
-        <v-flex xs11>
-          Create/Choose a pair of data sources to use for reconciliation. Source 1 is the source while source 2 is the target
-        </v-flex>
+        <v-spacer></v-spacer>
         <v-flex
           xs1
           text-xs-right
@@ -297,7 +295,7 @@
         </v-flex>
       </v-layout>
       <v-layout column>
-        <v-flex>
+        <!-- <v-flex>
           <v-card
             style="width: 1000px"
             color='cyan lighten-5'
@@ -399,7 +397,7 @@
               </v-btn>
             </v-card-actions>
           </v-card>
-        </v-flex>
+        </v-flex> -->
         <v-flex>
           <v-card
             style="width: 1000px"
@@ -466,14 +464,14 @@
               </v-data-table>
             </v-card-text>
             <v-card-actions>
-              <v-btn
+              <!-- <v-btn
                 :disabled="!canDeletePair"
                 color="error"
                 round
                 @click="confirmDeletePair"
               >
                 <v-icon left>delete</v-icon>Delete Pair
-              </v-btn>
+              </v-btn> -->
               <v-spacer></v-spacer>
               <v-btn
                 color="primary"

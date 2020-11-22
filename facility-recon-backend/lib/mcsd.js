@@ -64,6 +64,9 @@ module.exports = () => ({
     async.doWhilst(
       (callback) => {
         const options = {
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
           url,
         };
         url = false;
@@ -132,6 +135,9 @@ module.exports = () => ({
     async.doWhilst(
       (callback) => {
         const options = {
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
           url,
         };
         url = false;
@@ -201,6 +207,9 @@ module.exports = () => ({
     async.doWhilst(
       (callback) => {
         const options = {
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
           url,
         };
         url = false;
@@ -273,6 +282,9 @@ module.exports = () => ({
     async.doWhilst(
       (callback) => {
         const options = {
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
           url,
         };
         url = false;
@@ -332,6 +344,9 @@ module.exports = () => ({
     async.doWhilst(
       (callback) => {
         const options = {
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
           url,
         };
         url = false;
@@ -416,6 +431,9 @@ module.exports = () => ({
     async.doWhilst(
       (callback) => {
         const options = {
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
           url,
         };
         url = false;
@@ -471,6 +489,9 @@ module.exports = () => ({
     async.doWhilst(
       (callback) => {
         const options = {
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
           url,
         };
         url = false;
@@ -517,6 +538,9 @@ module.exports = () => ({
     async.doWhilst(
       (callback) => {
         const options = {
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
           url,
         };
         url = false;
@@ -573,6 +597,9 @@ module.exports = () => ({
         .addQuery('_id', entityParent)
         .toString()
       const options = {
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
         url,
       };
 
@@ -869,6 +896,9 @@ module.exports = () => ({
 
     function cntLvls(url, callback) {
       const options = {
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
         url,
       };
       request.get(options, (err, res, body) => {
@@ -2122,7 +2152,7 @@ module.exports = () => ({
         winston.error(err);
         return callback(err);
       }
-      // cacheFHIR2ES.cacheFHIR()
+      cacheFHIR2ES.cacheFHIR()
       this.cleanCache(`${url}/Location`);
       callback(err, body);
     });
@@ -2206,7 +2236,6 @@ module.exports = () => ({
     })
   },
   saveMatch(source1Id, source2Id, source1DB, callback) {
-    winston.error(source1Id + ' ' + source2Id + ' ' + source1DB)
     winston.info("Saving match")
     let identifierSystem
     if(config.getConf("vims:tenancyid") === source1DB) {
@@ -2229,7 +2258,7 @@ module.exports = () => ({
       }
     }, (err, res) => {
       let source1Ident = res.source1mCSD.entry[0].resource.identifier.find((ident) => {
-        return ident.system === 'https://vims.moh.go.tz' && ident.type.text === 'id'
+        return (ident.system === 'https://vims.moh.go.tz' && ident.type.text === 'id') || (ident.system === 'http://dhis2.org/id')
       })
       if(!source1Ident) {
         winston.error("Source1 identifier is missing")
@@ -2534,7 +2563,7 @@ module.exports = () => ({
         }
         this.getLocationByID(source2DB, source2Id, false, (location) => {
           if(location.entry.length === 0) {
-            winston.error("Cant break match as the location in source 1 was not found")
+            winston.error("Cant break match as the location in source 2 was not found")
             return callback(null)
           }
           for(let index in location.entry[0].resource.identifier) {

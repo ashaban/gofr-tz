@@ -151,6 +151,22 @@ export const scoresMixin = {
                 source2Parents: scoreResult.exactMatch.parents,
                 matchComments: scoreResult.exactMatch.matchComments
               })
+            } else if (scoreResult.multipleMatch.length > 0) {
+              for (let multiple of scoreResult.multipleMatch) {
+                this.$store.state.multipleMatch.push({
+                  source1Name: scoreResult.source1.name,
+                  source1Id: scoreResult.source1.id,
+                  source1Code: scoreResult.source1.code,
+                  source1UUID: scoreResult.source1.uuid,
+                  source1Parents: scoreResult.source1.parents,
+                  source2Name: multiple.name,
+                  source2Id: multiple.id,
+                  source2Code: multiple.code,
+                  source2UUID: multiple.uuid,
+                  source2Parents: multiple.parents,
+                  canBreak: multiple.canBreak
+                })
+              }
             } else {
               let addTree = this.topTree
               for (let i = scoreResult.source1.parents.length - 1; i >= 0; i--) {
@@ -236,6 +252,7 @@ export const scoresMixin = {
       this.$store.state.source1UnMatched = []
       this.$store.state.source2UnMatched = []
       this.$store.state.matchedContent = []
+      this.$store.state.multipleMatch = []
       this.$store.state.noMatchContent = []
       this.$store.state.ignoreContent = []
       this.$store.state.flagged = []

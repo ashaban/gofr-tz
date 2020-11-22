@@ -1824,7 +1824,8 @@ if (cluster.isMaster) {
       async.eachSeries(documents, (document, nxtDoc) => {
         let thisRanking = {
           potentialMatches: {},
-          exactMatch: {}
+          exactMatch: {},
+          multipleMatch: []
         }
         let parents = []
         if(mappingColumn === 'vims') {
@@ -1876,13 +1877,15 @@ if (cluster.isMaster) {
             let query = {
               query: {
                 bool: {
-                  should: [
-                    {
-                      match: {
-                        "code.keyword": document._source.code
-                      }
+                  should: [{
+                    match: {
+                      "code": document._source.code
                     }
-                  ]
+                  }, {
+                    match: {
+                      "code.keyword": document._source.code
+                    }
+                  }]
                 }
               }
             }
@@ -1916,7 +1919,22 @@ if (cluster.isMaster) {
                   )
                 }
               } else if(hfrfacilities.length > 1) {
-                winston.error(JSON.stringify(query,0,2));
+                thisRanking.multipleMatch = []
+                for(let fac of hfrfacilities) {
+                  let canBreak = true
+                  if(!fac['_source'][mappingColumn]) {
+                    canBreak = false
+                  }
+                  let parents = getParents(fac)
+                  thisRanking.multipleMatch.push({
+                    name: fac._source.name,
+                    id: fac._source.id,
+                    code: fac._source.code,
+                    uuid: fac._source.uuid.split('Location/')[1],
+                    canBreak,
+                    parents
+                  })
+                }
                 winston.error('Multiple matches found for ' + document._source.name);
                 winston.error(JSON.stringify(hfrfacilities,0,2));
                 return callback(null)
@@ -2033,9 +2051,6 @@ if (cluster.isMaster) {
             source2TotalAllRecords: source2TotalRecords,
             totalAllMapped,
             totalAllFlagged,
-            // totalAllNoMatch,
-            // totalAllIgnored,
-            // source1TotalAllNotMapped,
             source1TotalAllRecords: documents.length
           };
           winston.info('Done calculating scores')

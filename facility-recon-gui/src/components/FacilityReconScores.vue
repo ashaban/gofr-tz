@@ -768,6 +768,13 @@
               right
             >thumb_up</v-icon>
           </v-tab>
+          <v-tab key="double">
+            DOUBLE MATCHED ({{$store.state.multipleMatch.length}})
+            <v-icon
+              color="white"
+              right
+            >thumb_up</v-icon>
+          </v-tab>
           <!-- <v-tab key="nomatch">
             NO MATCH ({{source1TotalNoMatch}})
             <v-icon
@@ -835,6 +842,63 @@
                       <v-icon>undo</v-icon>Break Match
                     </v-btn>
                   </td>
+                </template>
+              </v-data-table>
+            </template>
+            <template v-else>
+              <v-progress-linear
+                :size="70"
+                indeterminate
+                color="amber"
+              ></v-progress-linear>
+            </template>
+          </v-tab-item>
+          <v-tab-item key="double">
+            <template v-if='$store.state.multipleMatch.length > 0'>
+              <v-text-field
+                v-model="searchMatched"
+                append-icon="search"
+                label="Search"
+                single-line
+                hide-details
+              ></v-text-field>
+              <v-data-table
+                :headers="matchedHeaders"
+                :items="$store.state.multipleMatch"
+                :search="searchMatched"
+                class="elevation-1"
+              >
+                <template
+                  slot="items"
+                  slot-scope="props"
+                >
+                  <td>{{props.item.source1Name}}</td>
+                  <td>{{props.item.source1Code}}</td>
+                  <td>{{props.item.source2Name}}</td>
+                  <td>{{props.item.source2Code}}</td>
+                  <td></td>
+                  <td v-if="props.item.canBreak">
+                    <v-btn
+                      v-if="$store.state.recoStatus == 'Done'"
+                      disabled
+                      color="error"
+                      style='text-transform: none'
+                      small
+                      @click='breakMatch(props.item.source1UUID, props.item.source2UUID, "doubleMatch")'
+                    >
+                      <v-icon>undo</v-icon>Break Match
+                    </v-btn>
+                    <v-btn
+                      v-else
+                      color="error"
+                      style='text-transform: none'
+                      small
+                      @click='breakMatch(props.item.source1UUID, props.item.source2UUID, "doubleMatch")'
+                    >
+                      <v-icon>undo</v-icon>Break Match
+                    </v-btn>
+                  </td>
+                  <td v-else></td>
                 </template>
               </v-data-table>
             </template>
@@ -1438,7 +1502,7 @@ export default {
       this.selectedSource2UUID = source2UUID
       this.saveMatch('flag')
     },
-    breakMatch (source1UUID, source2UUID) {
+    breakMatch (source1UUID, source2UUID, matchType) {
       this.$store.state.progressTitle = 'Breaking match'
       this.$store.state.dynamicProgress = true
       let formData = new FormData()
@@ -1453,6 +1517,9 @@ export default {
         )
         .then(data => {
           this.$store.state.dynamicProgress = false
+          if (matchType === 'doubleMatch') {
+            return this.getScores()
+          }
           this.alert = true
           this.alertTitle = 'Information'
           this.alertText = 'Scores for this Location may not be available unless you recalculate scores'

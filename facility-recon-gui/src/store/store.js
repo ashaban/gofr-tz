@@ -111,6 +111,7 @@ export const store = new Vuex.Store({
     totalSource1Levels: '',
     totalSource2Levels: '',
     matchedContent: [],
+    multipleMatch: [],
     noMatchContent: [],
     ignoreContent: [],
     flagged: [],

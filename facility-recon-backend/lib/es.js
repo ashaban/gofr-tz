@@ -4,6 +4,23 @@ const async = require('async')
 const winston = require('winston');
 const config = require('./config');
 
+const getIndexMapping = (index, callback) => {
+  let url = URI(config.getConf('elastic:server'))
+    .segment(index)
+    .segment('_mapping')
+    .toString()
+  axios({
+    method: 'GET',
+    url,
+    auth: {
+      username: config.getConf('elastic:username'),
+      password: config.getConf('elastic.password'),
+    }
+  }).then((response) => {
+    return callback(response.data)
+  })
+}
+
 const getDocument = ({index, query}, callback) => {
   let error = false
   let documents = []
@@ -27,11 +44,13 @@ const getDocument = ({index, query}, callback) => {
           password: config.getConf('elastic.password'),
         }
       }).then((response) => {
+        if(response.data.hits && response.data.hits.hits && Array.isArray(response.data.hits.hits)) {
+          documents = documents.concat(response.data.hits.hits)
+        }
         if(response.data.hits.hits.length === 0 || !response.data._scroll_id) {
           scroll_id = null
         } else {
           scroll_id = response.data._scroll_id
-          documents = documents.concat(response.data.hits.hits)
           url = URI(config.getConf('elastic:server'))
             .segment('_search')
             .segment('scroll')
@@ -161,6 +180,7 @@ const createESIndex = (index, IDFields, reportFields, callback) => {
 }
 
 module.exports = {
+  getIndexMapping,
   getDocument,
   createESIndex
 };

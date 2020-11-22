@@ -1105,7 +1105,6 @@ router.get('/getCodeSystem', (req, res) => {
     id
   },
   (codeSystem) => {
-    winston.error(codeSystem)
     let codeSystemResource = [];
     if (codeSystem.entry.length > 0 && codeSystem.entry[0].resource.concept) {
       codeSystemResource = codeSystem.entry[0].resource.concept;
