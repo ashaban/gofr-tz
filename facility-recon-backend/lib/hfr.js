@@ -77,7 +77,6 @@ module.exports = () => ({
             winston.error('Non JSON data returned by HFR while getting facilities');
             return callback(null, false);
           }
-          nexturl = false
           return callback(null, nexturl);
         });
       },

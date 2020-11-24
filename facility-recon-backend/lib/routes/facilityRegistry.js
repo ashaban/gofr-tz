@@ -1182,6 +1182,8 @@ router.get('/syncHFRFacilities', (req, res) => {
       fhir.resourceType = 'Bundle';
       fhir.entry = [];
       async.eachSeries(facilities, (facility, nxtFacility) => {
+        facility.name = facility.name.trim()
+        facility.name = facility.name.replace(/\s+/g,' ');
         const identifier = `http://hfrportal.ehealth.go.tz|${facility.id}`;
         const url = URI(config.getConf('mCSD:url'))
           .segment(config.getConf('hfr:tenancyid'))
@@ -1225,7 +1227,10 @@ router.get('/syncHFRFacilities', (req, res) => {
               adminDiv = facility.properties.Admin_div.split('-').pop().trim();
             }
 
-            let HFRFacType = mixin.translateFacTypes(facility.properties.Fac_Type.toString().split('-'), facTypes.config.hierarchy);
+            let HFRFacType = ''
+            if(facility.properties.Fac_Type) {
+              HFRFacType = mixin.translateFacTypes(facility.properties.Fac_Type.toString().split('-'), facTypes.config.hierarchy);
+            }
             let HFRFacTypeName;
             if (!HFRFacType) {
               HFRFacTypeName = facility.properties.Fac_Type;
@@ -1258,6 +1263,7 @@ router.get('/syncHFRFacilities', (req, res) => {
           }
           if (fhir.entry.length >= 250) {
             mcsd.saveLocations(fhir, database, (err, body) => {
+              fhir.entry = []
               if (err) {
                 winston.error(err);
                 errorOccured = true;
@@ -1293,7 +1299,10 @@ router.get('/syncHFRFacilities', (req, res) => {
   });
 
   function createFacilityResource(facility) {
-    const facType = mixin.translateFacTypes(facility.properties.Fac_Type.toString().split('-'), facTypes.config.hierarchy);
+    let facType = ''
+    if(facility.properties.Fac_Type) {
+      facType = mixin.translateFacTypes(facility.properties.Fac_Type.toString().split('-'), facTypes.config.hierarchy);
+    }
     let facTypeId = '';
     let facTypeName;
     if (!facType) {
@@ -1342,14 +1351,7 @@ router.get('/syncHFRFacilities', (req, res) => {
           code: 'urn:ihe:iti:mcsd:2019:facility',
           display: 'Facility',
           userSelected: false,
-        }],
-      }, {
-        coding: [{
-          system: 'http://hfrportal.ehealth.go.tz/facilityType',
-          code: facTypeId,
-          display: facTypeName,
-        }],
-        text: 'Facility Type',
+        }]
       }],
       physicalType: {
         coding: [
@@ -1362,6 +1364,17 @@ router.get('/syncHFRFacilities', (req, res) => {
         text: 'Building',
       },
     };
+
+    if(facTypeName) {
+      building.type.push({
+        coding: [{
+          system: 'http://hfrportal.ehealth.go.tz/facilityType',
+          code: facTypeId,
+          display: facTypeName,
+        }],
+        text: 'Facility Type',
+      })
+    }
 
     if (facility.lat || facility.long) {
       building.position = {
@@ -1394,6 +1407,8 @@ router.get('/syncHFRAdminAreas', (req, res) => {
     fhir.type = 'batch';
     fhir.resourceType = 'Bundle';
     async.eachSeries(adminAreas, (adminArea, nxtAdmArea) => {
+      adminArea.name = adminArea.name.trim()
+      adminArea.name = adminArea.name.replace(/\s+/g,' ')
       const identifier = `http://hfrportal.ehealth.go.tz|${adminArea.id}`;
       const url = URI(config.getConf('mCSD:url'))
         .segment(database)
@@ -1437,6 +1452,7 @@ router.get('/syncHFRAdminAreas', (req, res) => {
         }
         if (fhir.entry.length >= 250) {
           mcsd.saveLocations(fhir, reqDB, (err, body) => {
+            fhir.entry = []
             if (err) {
               winston.error(err);
               errorOccured = true;
