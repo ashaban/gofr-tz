@@ -1822,6 +1822,9 @@ if (cluster.isMaster) {
       winston.info("Calculating scores of " + documents.length + " facilities")
       updateDataSavingPercent('initialize')
       async.eachSeries(documents, (document, nxtDoc) => {
+        if(document._source.council != 'Iringa MC' && document._source.council != 'Ilala MC') {
+          // return nxtDoc()
+        }
         let thisRanking = {
           potentialMatches: {},
           exactMatch: {},
@@ -1829,7 +1832,7 @@ if (cluster.isMaster) {
         }
         let parents = []
         if(mappingColumn === 'vims') {
-          parents = [document._source.zone]
+          parents = [document._source.council]
         }
         thisRanking.source1 = {
           name: document._source.name,
@@ -1878,10 +1881,6 @@ if (cluster.isMaster) {
               query: {
                 bool: {
                   should: [{
-                    match: {
-                      "code": document._source.code
-                    }
-                  }, {
                     match: {
                       "code.keyword": document._source.code
                     }

@@ -17,7 +17,7 @@
         <meta name="author" content="Ally Shaban">
       
       <link rel="shortcut icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.1.1, mkdocs-material-5.1.6">
+      <meta name="generator" content="mkdocs-1.1.2, mkdocs-material-5.1.6">
     
     
       
@@ -441,7 +441,7 @@
             
           
           <div class="md-content">
-            <article class="md-content__inner md-typeset">
+            <article class="md-content__inner md-typeset"><a class="md-content__button md-icon" download href="installation.pdf" title="PDF Export"><svg style="height: 1.2rem; width: 1.2rem;" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg"><path d="M224 136V0H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V160H248c-13.2 0-24-10.8-24-24zm76.45 211.36l-96.42 95.7c-6.65 6.61-17.39 6.61-24.04 0l-96.42-95.7C73.42 337.29 80.54 320 94.82 320H160v-80c0-8.84 7.16-16 16-16h32c8.84 0 16 7.16 16 16v80h65.18c14.28 0 21.4 17.29 11.27 27.36zM377 105L279.1 7c-4.5-4.5-10.6-7-17-7H256v128h128v-6.1c0-6.3-2.5-12.4-7-16.9z"></path></svg></a>
               
                 
                   <a href="https://github.com/ashaban/gofr-tz/edit/master/docs/dev/installation.md" title="Edit this page" class="md-content__button md-icon">
@@ -458,43 +458,34 @@
 <div class="codehilite"><pre><span></span><code>sudo apt install postgresql-10
 </code></pre></div>
 
-
 <p>Follow instructions in <a href="https://www.digitalocean.com/community/tutorials/install-tomcat-9-ubuntu-1804">here</a> to install tomcat 9. You may need to look for other tomcat installation directions if you are not using ubuntu 18.04</p>
 <p>Create postgres user and database for hapi</p>
 <div class="codehilite"><pre><span></span><code>sudo -u postgres psql
 </code></pre></div>
 
-
 <div class="codehilite"><pre><span></span><code><span class="nv">postgres</span><span class="o">=</span><span class="c1"># create database hapi;</span>
 </code></pre></div>
-
 
 <div class="codehilite"><pre><span></span><code><span class="nv">postgres</span><span class="o">=</span><span class="c1"># create user hapi with encrypted password &#39;hapi&#39;;</span>
 </code></pre></div>
 
-
 <div class="codehilite"><pre><span></span><code><span class="nv">postgres</span><span class="o">=</span><span class="c1"># grant all privileges on database hapi to hapi;</span>
 </code></pre></div>
-
 
 <p>Install Maven</p>
 <div class="codehilite"><pre><span></span><code>sudo apt install maven
 </code></pre></div>
 
-
 <p>Clone HAPI FHIR</p>
 <div class="codehilite"><pre><span></span><code>git clone https://github.com/hapifhir/hapi-fhir-jpaserver-starter.git
 </code></pre></div>
 
-
 <div class="codehilite"><pre><span></span><code><span class="nb">cd</span> hapi-fhir-jpaserver-starter
 </code></pre></div>
-
 
 <p>Open and edit pom.xml to change finalName to hapi</p>
 <div class="codehilite"><pre><span></span><code>vim pom.xml
 </code></pre></div>
-
 
 <div class="codehilite"><pre><span></span><code>&lt;build&gt;
 
@@ -502,11 +493,9 @@
         &lt;finalName&gt;hapi&lt;/finalName&gt;
 </code></pre></div>
 
-
 <p>Open and edit src/main/resources/application.yaml as below</p>
 <div class="codehilite"><pre><span></span><code>vim src/main/resources/application.yaml
 </code></pre></div>
-
 
 <div class="codehilite"><pre><span></span><code>---
 hapi:
@@ -559,31 +548,25 @@ spring:
     active: r4
 </code></pre></div>
 
-
 <p>Create .war file</p>
 <div class="codehilite"><pre><span></span><code>mvn clean install -DskipTests
 </code></pre></div>
-
 
 <p>Copy the .war to the tomcat webapps directory</p>
 <div class="codehilite"><pre><span></span><code>sudo cp target/hapi.war /opt/tomcat/webapps
 </code></pre></div>
 
-
 <h3>Install Mongo Database</h3>
 <div class="codehilite"><pre><span></span><code>sudo apt-get install mongodb
 </code></pre></div>
-
 
 <p>Clone administrative area repository</p>
 <div class="codehilite"><pre><span></span><code>git clone https://github.com/ashaban/gofr-tz.git
 </code></pre></div>
 
-
 <p>Enter the server directory and install node packages.</p>
 <div class="codehilite"><pre><span></span><code><span class="nb">cd</span> gofr-tz/facility-recon-backend <span class="o">&amp;&amp;</span> npm install
 </code></pre></div>
-
 
 <h2>Configuration</h2>
 <p>App configuration file is located under facility-recon-backend/config/default.json</p>

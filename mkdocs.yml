@@ -49,13 +49,14 @@ markdown_extensions:
 plugins:
   - search
   - git-revision-date-localized
+  - pdf-export
   # - pdf-export:
   #     combined: true
 
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/intrahealth/emNutt
+      link: https://github.com/ashaban/gofr-tz
 # theme:
 # logo: 'images/logo.png' must be 128x128
 # logo:

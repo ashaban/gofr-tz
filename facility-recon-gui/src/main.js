@@ -8,12 +8,14 @@ import Vuelidate from 'vuelidate'
 import 'vuetify/dist/vuetify.min.css'
 import axios from 'axios'
 import guiConfig from '../config/config.json'
+import MultiFiltersPlugin from './plugins/MultiFilters'
 import {
   store
 } from './store/store'
 import i18n from './i18n'
 
 Vue.use(Vuelidate)
+Vue.use(MultiFiltersPlugin)
 Vue.use(Vuetify, {
   theme: {
     primary: '#3F51B5',

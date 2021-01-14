@@ -100,7 +100,7 @@
       >
         <v-flex xs6>
           <template v-if="Object.keys($store.state.activePair.source1).length > 0 && !$store.state.denyAccess">
-            {{ $t('App.source') }} 1: <b>{{$store.state.activePair.source1.name}}</b>, &nbsp; &nbsp; {{ $t('App.source') }} 2: <b>{{$store.state.activePair.source2.name}}</b>,
+            {{ $t('App.source') }} 1: <b>{{$store.state.activePair.source1.name.toUpperCase()}}</b>, &nbsp; &nbsp; {{ $t('App.source') }} 2: <b>{{$store.state.activePair.source2.name.toUpperCase()}}</b>,
             &nbsp; &nbsp; Recon Status: <v-icon
               small
               v-if="$store.state.recoStatus === 'in-progress'"

@@ -1,5 +1,6 @@
 <template>
   <v-container fluid>
+    {{$store.state.activeDataSourcePair}}
     <template v-if='$store.state.uploadRunning'><br><br><br>
       <v-alert
         type="info"
@@ -305,6 +306,14 @@
         row
         wrap
       >
+        <v-flex xs5>
+          <v-autocomplete
+            :items="source1ParentNames"
+            @change="filterByParent"
+            label="Filter by District"
+            clearable
+          ></v-autocomplete>
+        </v-flex>
         <v-spacer></v-spacer>
         <v-flex xs2>
           <v-btn
@@ -403,7 +412,10 @@
           right
         >
           <div style="border-style: solid;border-color:green; text-align: center;">
-            <b>Source 1 Reconciliation Status</b>
+            <b>
+              <template v-if="$store.state.activePair.source1 && Object.keys($store.state.activePair.source1).length > 0">
+                {{$store.state.activePair.source1.name.toUpperCase()}}
+              </template> Reconciliation Status</b>
 
             <v-layout
               row
@@ -510,10 +522,13 @@
         >
           <v-card color="green lighten-2">
             <v-card-title primary-title>
-              Source 1 Unmatched
+              Unmatched in
+              <template v-if="Object.keys($store.state.activePair.source1).length > 0">
+                {{$store.state.activePair.source1.name.toUpperCase()}}
+              </template>
               <v-spacer></v-spacer>
               <v-text-field
-                v-model="searchUnmatchedSource1"
+                @input="filterSrc1Unmatched"
                 append-icon="search"
                 label="Search"
                 single-line
@@ -529,7 +544,8 @@
               <v-data-table
                 :headers="source1GridHeaders"
                 :items="source1Grid"
-                :search="searchUnmatchedSource1"
+                :search="filtersForSrc1Unmatched"
+                :custom-filter="customFilter"
                 light
                 class="elevation-1"
               >
@@ -546,7 +562,9 @@
                     @click="getPotentialMatch(props.item.id)"
                     style="cursor: pointer"
                     :key='props.item.id'
-                  >{{props.item.name}}</td>
+                  >
+                    {{props.item.name}} <br>&ensp;&ensp;{{props.item.parents.join('->')}}
+                  </td>
                   <td>{{props.item.code}}</td>
                   <td
                     v-for="(parent,index) in props.item.parents"
@@ -573,7 +591,10 @@
             dark
           >
             <v-card-title primary-title>
-              Source 2 Unmatched
+              Unmatched in
+              <template v-if="$store.state.activePair.source2 && Object.keys($store.state.activePair.source2).length > 0">
+                {{$store.state.activePair.source2.name.toUpperCase()}}
+              </template>
               <v-spacer></v-spacer>
               <v-text-field
                 v-model="searchUnmatchedSource2"
@@ -615,7 +636,12 @@
           right
         >
           <div style='border-style: solid;border-color: green; text-align: center;'>
-            <b>Source 2 Reconciliation Status</b>
+            <b>
+              <template v-if="Object.keys($store.state.activePair.source2).length > 0">
+                {{$store.state.activePair.source2.name.toUpperCase()}}
+              </template>
+               Reconciliation Status
+            </b>
             <v-layout
               row
               wrap
@@ -718,7 +744,12 @@
               <v-flex xs6>
                 <v-layout column>
                   <v-flex align-center>
-                    <b>Not in Source 1</b>
+                    <b>
+                      Not in
+                      <template v-if="Object.keys($store.state.activePair.source1).length > 0">
+                        {{$store.state.activePair.source1.name.toUpperCase()}}
+                      </template>
+                    </b>
                   </v-flex>
                   <v-flex xs1>
                     <center>
@@ -799,7 +830,7 @@
           <v-tab-item key="match">
             <template v-if='$store.state.matchedContent != null'>
               <v-text-field
-                v-model="searchMatched"
+                @input="filterMatched"
                 append-icon="search"
                 label="Search"
                 single-line
@@ -808,16 +839,17 @@
               <v-data-table
                 :headers="matchedHeaders"
                 :items="$store.state.matchedContent"
-                :search="searchMatched"
+                :search="filtersForMatched"
+                :custom-filter="customFilter"
                 class="elevation-1"
               >
                 <template
                   slot="items"
                   slot-scope="props"
                 >
-                  <td>{{props.item.source1Name}}</td>
+                  <td>{{props.item.source1Name}} <br>&ensp;&ensp;{{props.item.source1Parents.join('->')}}</td>
                   <td>{{props.item.source1Code}}</td>
-                  <td>{{props.item.source2Name}}</td>
+                  <td>{{props.item.source2Name}} <br>&ensp;&ensp;{{props.item.source2Parents | joinParentsAndReverse}}</td>
                   <td>{{props.item.source2Code}}</td>
                   <td v-if='props.item.matchComments'>{{props.item.matchComments.join(', ')}}</td>
                   <td v-else></td>
@@ -854,7 +886,7 @@
             </template>
           </v-tab-item>
           <v-tab-item key="double">
-            <template v-if='$store.state.multipleMatch.length > 0'>
+            <template v-if='$store.state.multipleMatch.length != null'>
               <v-text-field
                 v-model="searchMatched"
                 append-icon="search"
@@ -872,9 +904,9 @@
                   slot="items"
                   slot-scope="props"
                 >
-                  <td>{{props.item.source1Name}}</td>
+                  <td>{{props.item.source1Name}} <br>&ensp;&ensp;{{props.item.source1Parents.join('->')}}</td>
                   <td>{{props.item.source1Code}}</td>
-                  <td>{{props.item.source2Name}}</td>
+                  <td>{{props.item.source2Name}} <br>&ensp;&ensp;{{props.item.source2Parents | joinParentsAndReverse}}</td>
                   <td>{{props.item.source2Code}}</td>
                   <td></td>
                   <td v-if="props.item.canBreak">
@@ -1037,9 +1069,9 @@
                   slot="items"
                   slot-scope="props"
                 >
-                  <td>{{props.item.source1Name}}</td>
+                  <td>{{props.item.source1Name}} <br>&ensp;&ensp;{{props.item.source1Parents.join('->')}}</td>
                   <td>{{props.item.source1Code}}</td>
-                  <td>{{props.item.source2Name}}</td>
+                  <td>{{props.item.source2Name}} <br>&ensp;&ensp;{{props.item.source2Parents | joinParentsAndReverse}}</td>
                   <td>{{props.item.source2Code}}</td>
                   <td>{{props.item.flagComment}}</td>
                   <td>
@@ -1151,6 +1183,14 @@ export default {
       sort_arrow: 'up',
       pagination: { sortBy: 'score' },
       recoLevel: 0,
+      filtersForSrc1Unmatched: {
+        byParent: '',
+        bySrc1Unmatched: ''
+      },
+      filtersForMatched: {
+        byParentSrc1: '',
+        byMatched: ''
+      },
       searchUnmatchedSource2: '',
       searchUnmatchedSource1: '',
       searchPotential: '',
@@ -1179,15 +1219,15 @@ export default {
       dialogWidth: '',
       source1UnmatchedHeaders: [{ text: 'Name', value: 'name' }, { text: 'Code', value: 'code' }],
       noMatchHeaders: [
-        { text: 'Source 1 Location', value: 'source1Name' },
-        { text: 'Source 1 Code', value: 'source1Code' },
+        { text: `${this.$store.state.activePair.source1.name.toUpperCase()} Location`, value: 'source1Name' },
+        { text: `${this.$store.state.activePair.source1.name.toUpperCase()} Code`, value: 'source1Code' },
         { text: 'Parents', value: 'parents' }
       ],
       flaggedHeaders: [
-        { text: 'Source 1 Location', value: 'source1Name' },
-        { text: 'Source 1 Code', value: 'source1Code' },
-        { text: 'Source 2 Location', value: 'source2Name' },
-        { text: 'Source 2 Code', value: 'source2Code' },
+        { text: `${this.$store.state.activePair.source1.name.toUpperCase()} Location`, value: 'source1Name' },
+        { text: `${this.$store.state.activePair.source1.name.toUpperCase()} Code`, value: 'source1Code' },
+        { text: `${this.$store.state.activePair.source2.name.toUpperCase()} Location`, value: 'source2Name' },
+        { text: `${this.$store.state.activePair.source2.name.toUpperCase()} Code`, value: 'source2Code' },
         { text: 'Comment', value: 'flagComment' }
       ]
     }
@@ -1330,7 +1370,7 @@ export default {
       if (source2Id === null) {
         this.alert = true
         this.alertTitle = 'Information'
-        this.alertText = 'Select Source 2 Location to match against Source 1 Location'
+        this.alertText = `Select ${this.$store.state.activePair.source2.name.toUpperCase()} Location to match against ${this.$store.state.activePair.source1.name.toUpperCase()} Location`
         return
       }
       if (type === 'flag') {
@@ -1737,6 +1777,51 @@ export default {
     back () {
       this.searchPotential = ''
       this.dialog = false
+    },
+    customFilter (items, filters, filter, headers) {
+      // Init the filter class.
+      const cf = new this.$MultiFilters(items, filters, filter, headers)
+
+      cf.registerFilter('bySrc1Unmatched', function (searchWord, items) {
+        if (!searchWord) return items
+
+        return items.filter(item => {
+          return item.name.toLowerCase().includes(searchWord.toLowerCase())
+        }, searchWord)
+      })
+
+      cf.registerFilter('byMatched', function (searchWord, items) {
+        if (!searchWord) return items
+
+        return items.filter(item => {
+          return item.source1Name.toLowerCase().includes(searchWord.toLowerCase())
+        }, searchWord)
+      })
+
+      cf.registerFilter('byParent', function (byParent, items) {
+        if (!byParent) return items
+        return items.filter(item => {
+          return item.parents && item.parents[0] && item.parents[0].toLowerCase() === byParent.toLowerCase()
+        }, byParent)
+      })
+
+      cf.registerFilter('byParentSrc1', function (byParentSrc1, items) {
+        if (!byParentSrc1) return items
+        return items.filter(item => {
+          return item.source1Parents && item.source1Parents[0] && item.source1Parents[0].toLowerCase() === byParentSrc1.toLowerCase()
+        }, byParentSrc1)
+      })
+      return cf.runFilters()
+    },
+    filterSrc1Unmatched (val) {
+      this.filtersForSrc1Unmatched = this.$MultiFilters.updateFilters(this.filtersForSrc1Unmatched, {bySrc1Unmatched: val})
+    },
+    filterMatched (val) {
+      this.filtersForMatched = this.$MultiFilters.updateFilters(this.filtersForMatched, {byMatched: val})
+    },
+    filterByParent (val) {
+      this.filtersForSrc1Unmatched = this.$MultiFilters.updateFilters(this.filtersForSrc1Unmatched, {byParent: val})
+      this.filtersForMatched = this.$MultiFilters.updateFilters(this.filtersForMatched, {byParentSrc1: val})
     }
   },
   computed: {
@@ -1757,10 +1842,10 @@ export default {
     },
     matchedHeaders () {
       let header = [
-        { text: 'Source1 Location', value: 'source1Name' },
-        { text: 'Source1 Code', value: 'source1Code' },
-        { text: 'Source2 Location', value: 'source2Name' },
-        { text: 'Source2 Code', value: 'source2Code' },
+        { text: `${this.$store.state.activePair.source1.name.toUpperCase()} Location`, value: 'source1Name' },
+        { text: `${this.$store.state.activePair.source1.name.toUpperCase()} Code`, value: 'source1Code' },
+        { text: `${this.$store.state.activePair.source2.name.toUpperCase()} Location`, value: 'source2Name' },
+        { text: `${this.$store.state.activePair.source2.name.toUpperCase()} Code`, value: 'source2Code' },
         { text: 'Match Comment', value: 'matchComments' }
       ]
       return header
@@ -1784,7 +1869,7 @@ export default {
       var results = []
       results.push(
         { sortable: false },
-        { text: 'Source 2 Location', value: 'name', sortable: false },
+        { text: `${this.$store.state.activePair.source2.name.toUpperCase()} Location`, value: 'name', sortable: false },
         { text: 'Code', value: 'code', sortable: false },
         { text: 'Parent', value: 'source2Parent', sortable: false }
       )

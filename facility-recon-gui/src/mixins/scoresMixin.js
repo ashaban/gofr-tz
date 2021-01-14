@@ -14,7 +14,8 @@ export const scoresMixin = {
     return {
       loadingSource2Unmatched: false,
       loadingSource1Unmatched: false,
-      topTree: ''
+      topTree: '',
+      source1ParentNames: []
     }
   },
   methods: {
@@ -98,6 +99,14 @@ export const scoresMixin = {
           this.$store.state.source1TotalAllRecords = scoresData.source1TotalAllRecords
           for (let index in this.$store.state.scoreResults) {
             let scoreResult = this.$store.state.scoreResults[index]
+            let parentExist = this.source1ParentNames.find((parnt) => {
+              return parnt === scoreResult.source1.parents
+            })
+            if (!parentExist && scoreResult.source1.parents[0]) {
+              this.source1ParentNames.push({
+                text: scoreResult.source1.parents[0]
+              })
+            }
             if (scoreResult.source1.hasOwnProperty('tag') && scoreResult.source1.tag === 'flagged') {
               this.$store.state.flagged.push({
                 source1Name: scoreResult.source1.name,
