@@ -43,7 +43,10 @@ export const scoresMixin = {
       this.$store.state.scoresProgressData.progressReqTimer = setInterval(this.scoreProgressCheckTimeout, 10000)
       const clientId = this.$store.state.clientId
       axios.get(backendServer + '/progress/scoreResults/' + clientId, {
-        cancelToken: this.$store.state.scoresProgressData.cancelTokenSource.token
+        cancelToken: this.$store.state.scoresProgressData.cancelTokenSource.token,
+        onDownloadProgress: () => {
+          clearInterval(this.$store.state.scoresProgressData.progressReqTimer)
+        }
       }).then((scoreProgress) => {
         clearInterval(this.$store.state.scoresProgressData.progressReqTimer)
         if (!scoreProgress.data ||

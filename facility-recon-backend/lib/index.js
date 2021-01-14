@@ -1822,9 +1822,6 @@ if (cluster.isMaster) {
       winston.info("Calculating scores of " + documents.length + " facilities")
       updateDataSavingPercent('initialize')
       async.eachSeries(documents, (document, nxtDoc) => {
-        if(document._source.council != 'Iringa MC' && document._source.council != 'Ilala MC') {
-          // return nxtDoc()
-        }
         let thisRanking = {
           potentialMatches: {},
           exactMatch: {},
