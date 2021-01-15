@@ -47,46 +47,98 @@ module.exports = () => ({
     );
   },
 
-  getFacilities(callback) {
-    let facilities = [];
-    let nexturl = new URI(config.getConf('hfr:baseURL')).segment('/api/collections/409.json').addQuery('human', 'true');
+  getFacilities(page, callback) {
+    // let facilitiesdel = require('./delete.json')
+    // return callback(facilitiesdel)
+    let facilities = {
+      human: [],
+      nonHuman: [],
+      nextPage: null
+    };
+
     const username = config.getConf('hfr:username');
     const password = config.getConf('hfr:password');
     const auth = `Basic ${new Buffer(`${username}:${password}`).toString('base64')}`;
-    async.doWhilst(
-      (callback) => {
+
+    async.parallel({
+      human: (callback) => {
+        url = new URI(config.getConf('hfr:baseURL')).segment('/api/collections/409.json').addQuery('human', 'true');
+        if(page) {
+          url = url.addQuery('page', page)
+        }
         const options = {
-          url: nexturl.toString(),
+          url: url.toString(),
           headers: {
             Authorization: auth,
           },
         };
-        request.get(options, (err, res, body) => {
-          if (isJSON(body)) {
-            body = JSON.parse(body);
-            if (body.hasOwnProperty('sites')) {
-              facilities = facilities.concat(body.sites);
-              if (body.hasOwnProperty('nextPage')) {
-                nexturl = body.nextPage;
-              } else {
-                nexturl = false;
+        getDt(() => {
+          return callback(null)
+        })
+        function getDt(clbck) {
+          request.get(options, (err, res, body) => {
+            if (isJSON(body)) {
+              body = JSON.parse(body);
+              if (body.hasOwnProperty('sites')) {
+                facilities.human = facilities.human.concat(body.sites);
+                if (body.hasOwnProperty('nextPage')) {
+                  nexturl = URI(body.nextPage);
+                  let qries = nexturl.query().split('&');
+                  for(let qr of qries) {
+                    if(qr.startsWith('page')) {
+                      facilities.nextPage = qr.split('=')[1]
+                    }
+                  }
+                } else {
+                  nexturl = false;
+                }
               }
+              return clbck()
+            } else {
+              winston.error(body);
+              winston.error('Non JSON data returned by HFR while getting facilities');
+              getDt(() => {
+                return clbck()
+              })
             }
-          } else {
-            winston.error(body);
-            winston.error('Non JSON data returned by HFR while getting facilities');
-            return callback(null, false);
-          }
-          return callback(null, nexturl);
-        });
-      },
-      (err, callback) => {
-        if (nexturl) {
-          winston.info(`Fetching In ${nexturl}`);
+          });
         }
-        return callback(null, nexturl !== false);
-      }, () => callback(facilities),
-    );
+      },
+      nonHuman: (callback) => {
+        url = new URI(config.getConf('hfr:baseURL')).segment('/api/collections/409.json').addQuery('human', 'false');
+        if(page) {
+          url = url.addQuery('page', page)
+        }
+        const options = {
+          url: url.toString(),
+          headers: {
+            Authorization: auth,
+          },
+        };
+        getDt(() => {
+          return callback(null)
+        })
+        function getDt(clbck) {
+          request.get(options, (err, res, body) => {
+            if (isJSON(body)) {
+              body = JSON.parse(body);
+              if (body.hasOwnProperty('sites')) {
+                facilities.nonHuman = facilities.nonHuman.concat(body.sites);
+              }
+              return clbck()
+            } else {
+              winston.error(body);
+              winston.error('Non JSON data returned by HFR while getting facilities');
+              getDt(() => {
+                return clbck()
+              })
+            }
+          });
+        }
+      }
+    }, () => {
+      return callback(facilities)
+    })
   },
 
   getAdminAreas(callback) {
