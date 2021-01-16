@@ -50,6 +50,7 @@ module.exports = () => ({
   getFacilities(page, callback) {
     // let facilitiesdel = require('./delete.json')
     // return callback(facilitiesdel)
+    // page = 0
     let facilities = {
       human: [],
       nonHuman: [],

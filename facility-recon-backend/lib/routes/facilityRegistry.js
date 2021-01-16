@@ -1206,17 +1206,17 @@ router.get('/syncHFRFacilities', (req, res) => {
             }
             mcsd.executeURL(url, (fhirLocation) => {
               let buildResPromise = new Promise((resolveBuildResProm) => {
+                const nonHumanFac = facilities.nonHuman.find((fac) => {
+                  return fac.id === facility.id
+                })
+                const hfrParentCode = nonHumanFac.properties.Admin_div
                 if (fhirLocation.entry.length === 0) {
-                  let nonHumanFac = facilities.nonHuman.find((fac) => {
-                    return fac.id === facility.id
-                  })
-                  let parentID = nonHumanFac.properties.Admin_div
                   let dvs = {}
                   let parentPromise = new Promise((resolve) => {
-                    if(!parentID) {
+                    if(!hfrParentCode) {
                       return resolve()
                     }
-                    const identifier = `http://hfrportal.ehealth.go.tz|${parentID}`;
+                    const identifier = `http://hfrportal.ehealth.go.tz|${hfrParentCode}`;
                     const url = URI(config.getConf('mCSD:url'))
                       .segment(config.getConf('hfr:tenancyid'))
                       .segment('Location')
@@ -1247,7 +1247,7 @@ router.get('/syncHFRFacilities', (req, res) => {
                   })
                   Promise.all([parentPromise]).then(() => {
                     const building = createFacilityResource(facility, parentDet);
-                    if(parentDet.id) {
+                    if(parentDet.id && dvs && dvs.entry && dvs.entry.length != 0) {
                       building.id = uuid5(facility.id.toString(), '7ee93e32-78da-4913-82f8-49eb0a618cfc');
                       winston.info(`Facility ${facility.name} missing, saving into DB`);
                       if(parentDet.level) {
@@ -1333,29 +1333,120 @@ router.get('/syncHFRFacilities', (req, res) => {
                     HFRFacTypeName = HFRFacType.name;
                   }
 
+                  let fhirParentCode
+                  let fhirCodeIdent = parentResource.resource.identifier && parentResource.resource.identifier.find((ident) => {
+                    return ident.type && ident.type.text === 'code' && ident.system === 'http://hfrportal.ehealth.go.tz'
+                  })
+                  if(fhirCodeIdent) {
+                    fhirParentCode = fhirCodeIdent.value
+                  }
                   if (facility.name !== facilityResource.resource.name
                     || HFRFacTypeName !== facType
-                    || adminDiv !== parentResource.resource.name
+                    || hfrParentCode !== fhirParentCode
                   ) {
-                    winston.info(`Facility ${facility.name} has been updated, adding request`);
-                    const building = createFacilityResource(facility);
-                    building.id = uuid5(facility.id.toString(), '1457baa3-9860-4d29-8ac9-bc926d9bef47');
-                    building.meta.tag.push({
-                      code: 'UpdatedFacility',
-                    });
-                    building.meta.tag.push({
-                      code: facilityResource.resource.id,
-                      display: 'Original UUID'
-                    });
-                    fhirReqs.entry.push({
-                      resource: building,
-                      request: {
-                        method: 'PUT',
-                        url: `Location/${building.id}`,
-                      },
-                    });
+                    let mergedToDB = false
+                    let tryMergingPromise = new Promise((resolve) => {
+                      //if anything has been changed apart from the parent then merge automatically
+                      if(!hfrParentCode || hfrParentCode != fhirParentCode) {
+                        return resolve()
+                      }
+                      let dvs = {}
+                      const identifier = `http://hfrportal.ehealth.go.tz|${hfrParentCode}`;
+                      const url = URI(config.getConf('mCSD:url'))
+                        .segment(config.getConf('hfr:tenancyid'))
+                        .segment('Location')
+                        .addQuery('identifier', identifier)
+                        .toString();
+                      mcsd.executeURL(url, (fhirParent) => {
+                        if(fhirParent.entry.length !== 1) {
+                          return resolve()
+                        }
+                        parentDet.id = fhirParent.entry[0].resource.id
+                        parentDet.name = fhirParent.entry[0].resource.name
+                        if(fhirParent.entry[0].resource.type) {
+                          for(let type of fhirParent.entry[0].resource.type) {
+                            for(let coding of type.coding) {
+                              if(coding.system === "2.25.123494412831734081331965080571820180508") {
+                                parentDet.level = parseInt(coding.code)
+                              }
+                            }
+                          }
+                        }
+                        const building = createFacilityResource(facility, parentDet);
+                        getDVS(parentDet.id, (dvsRes) => {
+                          if(dvsRes) {
+                            dvs = dvsRes
+                          }
+                          if(parentDet.id && dvs && dvs.entry && dvs.entry.length != 0) {
+                            building.id = facilityResource.resource.id
+                            winston.info(`Facility ${facility.name} updated, merging changes`);
+                            if(parentDet.level) {
+                              if(!building.type) {
+                                building.type = []
+                              }
+                              building.type.push({
+                                coding: [{
+                                  system: '2.25.123494412831734081331965080571820180508',
+                                  code: parentDet.level + 1,
+                                }],
+                              })
+                            }
+                            building.partOf = {
+                              reference: `Location/${parentDet.id}`,
+                              display: parentDet.name
+                            }
+                            if(dvs.entry && dvs.entry.length > 0) {
+                              if(!building.extension) {
+                                building.extension = []
+                              }
+                              building.extension.push({
+                                url: 'DistrictVaccineStore',
+                                valueReference: {
+                                  reference: `Location/${dvs.entry[0].resource.id}`
+                                }
+                              })
+                            }
+                            fhirProd.entry.push({
+                              resource: building,
+                              request: {
+                                method: 'PUT',
+                                url: `Location/${building.id}`,
+                              },
+                            });
+                            mergedToDB = true
+                            resolve()
+                          } else {
+                            resolve()
+                          }
+                        })
+                      })
+                    })
+                    tryMergingPromise.then(() => {
+                      if(mergedToDB) {
+                        return resolveBuildResProm()
+                      }
+                      const building = createFacilityResource(facility);
+                      winston.info(`Facility ${facility.name} has been updated and requres review before merging`);
+                      building.id = uuid5(facility.id.toString(), '1457baa3-9860-4d29-8ac9-bc926d9bef47');
+                      building.meta.tag.push({
+                        code: 'UpdatedFacility',
+                      });
+                      building.meta.tag.push({
+                        code: facilityResource.resource.id,
+                        display: 'Original UUID'
+                      });
+                      fhirReqs.entry.push({
+                        resource: building,
+                        request: {
+                          method: 'PUT',
+                          url: `Location/${building.id}`,
+                        },
+                      });
+                      return resolveBuildResProm()
+                    })
+                  } else {
+                    return resolveBuildResProm()
                   }
-                  return resolveBuildResProm()
                 }
               })
               buildResPromise.then(() => {
@@ -1604,8 +1695,8 @@ router.get('/syncHFRFacilities', (req, res) => {
 
 router.get('/syncHFRAdminAreas', (req, res) => {
   let errorOccured = false;
-  const reqDB = config.getConf('updaterequests:tenancyid');
-  const database = config.getConf('hfr:tenancyid');
+  const database = config.getConf('updaterequests:tenancyid');
+  const productionDB = config.getConf('hfr:tenancyid');
   winston.info('Getting facilities from HFR');
   hfr.getAdminAreas((err, adminAreas) => {
     if (err) {
@@ -1613,32 +1704,77 @@ router.get('/syncHFRAdminAreas', (req, res) => {
       return res.status(500).send();
     }
     winston.info(`Received ${adminAreas.length} Admin Areas from HFR`);
-    const fhir = {};
-    fhir.entry = [];
-    fhir.type = 'batch';
-    fhir.resourceType = 'Bundle';
+    const fhirProd = {};
+    fhirProd.type = 'batch';
+    fhirProd.resourceType = 'Bundle';
+    fhirProd.entry = [];
+    const fhirReqs = {};
+    fhirReqs.type = 'batch';
+    fhirReqs.resourceType = 'Bundle';
+    fhirReqs.entry = [];
     async.eachSeries(adminAreas, (adminArea, nxtAdmArea) => {
       adminArea.name = adminArea.name.trim()
       adminArea.name = adminArea.name.replace(/\s+/g,' ')
+      let parentDet = {
+        id: '',
+        name: ''
+      }
       const identifier = `http://hfrportal.ehealth.go.tz|${adminArea.id}`;
       const url = URI(config.getConf('mCSD:url'))
-        .segment(database)
+        .segment(productionDB)
         .segment('Location')
         .addQuery('identifier', identifier)
         .addQuery('_include', 'Location:partof')
         .toString();
       mcsd.executeURL(url, (fhirLocation) => {
         if (fhirLocation.entry.length === 0) {
-          winston.info(`${adminArea.name} missing`);
-          const jurisdiction = buildJurisdiction(adminArea, 'NewJurisdiction');
-          jurisdiction.id = uuid5(adminArea.id + jurisdiction.name, '1457baa3-9860-4d29-8ac9-bc926d9bef47');
-          fhir.entry.push({
-            resource: jurisdiction,
-            request: {
-              method: 'PUT',
-              url: `Location/${jurisdiction.id}`,
-            },
-          });
+          let parentPromise = new Promise((resolve) => {
+            const identifier = `http://hfrportal.ehealth.go.tz|${adminArea.parentID}`;
+            const url = URI(config.getConf('mCSD:url'))
+              .segment(config.getConf('hfr:tenancyid'))
+              .segment('Location')
+              .addQuery('identifier', identifier)
+              .toString();
+            mcsd.executeURL(url, (fhirParent) => {
+              if(fhirParent.entry.length !== 1) {
+                return resolve()
+              }
+              parentDet.id = fhirParent.entry[0].resource.id
+              parentDet.name = fhirParent.entry[0].resource.name
+              return resolve()
+            })
+          })
+          parentPromise.then(() => {
+            if(parentDet.id) {
+              winston.info(`${adminArea.name} missing, adding into production DB`);
+              const jurisdiction = buildJurisdiction(adminArea, 'NewJurisdiction');
+              jurisdiction.id = uuid5(adminArea.id + jurisdiction.name, '7ee93e32-78da-4913-82f8-49eb0a618cfc')
+              delete jurisdiction.meta.tag
+              delete jurisdiction.extension
+              jurisdiction.partOf = {
+                reference: `Location/${parentDet.id}`,
+                display: parentDet.name
+              }
+              fhirProd.entry.push({
+                resource: jurisdiction,
+                request: {
+                  method: 'PUT',
+                  url: `Location/${jurisdiction.id}`,
+                }
+              })
+            } else {
+              winston.info(`${adminArea.name} missing and requires review before merging`);
+              const jurisdiction = buildJurisdiction(adminArea, 'NewJurisdiction');
+              jurisdiction.id = uuid5(adminArea.id + jurisdiction.name, '1457baa3-9860-4d29-8ac9-bc926d9bef47');
+              fhirReqs.entry.push({
+                resource: jurisdiction,
+                request: {
+                  method: 'PUT',
+                  url: `Location/${jurisdiction.id}`,
+                },
+              });
+            }
+          })
         } else if (fhirLocation.entry.length === 2) {
           const parentJur = fhirLocation.entry.find(entry => entry.search.mode === 'include');
           const originalResource = fhirLocation.entry.find(entry => entry.search.mode === 'match');
@@ -1652,7 +1788,7 @@ router.get('/syncHFRAdminAreas', (req, res) => {
               code: originalResource.resource.id,
               display: 'Original UUID'
             });
-            fhir.entry.push({
+            fhirReqs.entry.push({
               resource: jurisdiction,
               request: {
                 method: 'PUT',
@@ -1661,34 +1797,79 @@ router.get('/syncHFRAdminAreas', (req, res) => {
             });
           }
         }
-        if (fhir.entry.length >= 250) {
-          mcsd.saveLocations(fhir, reqDB, (err, body) => {
-            fhir.entry = []
-            if (err) {
-              winston.error(err);
-              errorOccured = true;
+        if (fhirReqs.entry.length + fhirProd.entry.length >= 250) {
+          async.parallel({
+            prod: (callback) => {
+              if(fhirProd.entry.length === 0) {
+                return callback(null)
+              }
+              let tmpBundle = lodash.cloneDeep(fhirProd)
+              fhirProd.entry = []
+              mcsd.saveLocations(tmpBundle, productionDB, (err, body) => {
+                if (err) {
+                  winston.error(err);
+                  errorOccured = true;
+                }
+                return callback(null);
+              });
+            },
+            reqs: (callback) => {
+              if(fhirReqs.entry.length === 0) {
+                return callback(null)
+              }
+              let tmpBundle = lodash.cloneDeep(fhirReqs)
+              fhirReqs.entry = []
+              mcsd.saveLocations(tmpBundle, database, (err, body) => {
+                if (err) {
+                  winston.error(err);
+                  errorOccured = true;
+                }
+                return callback(null);
+              });
             }
-            return nxtAdmArea();
-          });
+          }, () => {
+            return nxtAdmArea()
+          })
         } else {
           return nxtAdmArea();
         }
       });
     }, () => {
-      if (fhir.entry.length > 0) {
-        mcsd.saveLocations(fhir, reqDB, (err, body) => {
-          winston.info('HFR Sync is done');
-          if (err) {
-            winston.error(err);
-            errorOccured = true;
+      if (fhirReqs.entry.length + fhirProd.entry.length > 0) {
+        async.parallel({
+          prod: (callback) => {
+            if(fhirProd.entry.length === 0) {
+              return callback(null)
+            }
+            mcsd.saveLocations(fhirProd, productionDB, (err, body) => {
+              if (err) {
+                winston.error(err);
+                errorOccured = true;
+              }
+              return callback();
+            });
+          },
+          reqs: (callback) => {
+            if(fhirReqs.entry.length === 0) {
+              return callback(null)
+            }
+            mcsd.saveLocations(fhirReqs, database, (err, body) => {
+              if (err) {
+                winston.error(err);
+                errorOccured = true;
+              }
+              return callback();
+            });
           }
+        }, () => {
+          winston.info('HFR Admin Area Sync is done');
           if (errorOccured) {
             return res.status(500).send();
           }
           return res.status(200).send();
-        });
+        })
       } else {
-        winston.info('HFR Sync is done');
+        winston.info('HFR Admin Area Sync is done');
         if (errorOccured) {
           return res.status(500).send();
         }
