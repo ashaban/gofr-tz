@@ -1879,7 +1879,7 @@ if (cluster.isMaster) {
                 bool: {
                   should: [{
                     match: {
-                      "code.keyword": document._source.code
+                      "code": document._source.code
                     }
                   }]
                 }

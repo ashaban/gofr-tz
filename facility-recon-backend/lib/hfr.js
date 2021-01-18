@@ -80,7 +80,7 @@ module.exports = () => ({
           request.get(options, (err, res, body) => {
             if (isJSON(body)) {
               body = JSON.parse(body);
-              if (body.hasOwnProperty('sites')) {
+              if (body.hasOwnProperty('sites') && body.sites.length > 0) {
                 facilities.human = facilities.human.concat(body.sites);
                 if (body.hasOwnProperty('nextPage')) {
                   nexturl = URI(body.nextPage);
@@ -93,8 +93,14 @@ module.exports = () => ({
                 } else {
                   nexturl = false;
                 }
+                return clbck()
+              } else {
+                winston.error(body);
+                winston.error('Unexpected response returned');
+                getDt(() => {
+                  return clbck()
+                })
               }
-              return clbck()
             } else {
               winston.error(body);
               winston.error('Non JSON data returned by HFR while getting facilities');
@@ -123,10 +129,16 @@ module.exports = () => ({
           request.get(options, (err, res, body) => {
             if (isJSON(body)) {
               body = JSON.parse(body);
-              if (body.hasOwnProperty('sites')) {
+              if (body.hasOwnProperty('sites') && body.sites.length > 0) {
                 facilities.nonHuman = facilities.nonHuman.concat(body.sites);
+                return clbck()
+              } else {
+                winston.error(body);
+                winston.error('Unexpected response returned');
+                getDt(() => {
+                  return clbck()
+                })
               }
-              return clbck()
             } else {
               winston.error(body);
               winston.error('Non JSON data returned by HFR while getting facilities');

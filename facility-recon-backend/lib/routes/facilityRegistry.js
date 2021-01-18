@@ -1458,7 +1458,7 @@ router.get('/syncHFRFacilities', (req, res) => {
                       }
                       let tmpBundle = lodash.cloneDeep(fhirProd)
                       fhirProd.entry = []
-                      if(page) {
+                      if(page !== null) {
                         callback(null);
                       }
                       mcsd.saveLocations(tmpBundle, productionDB, (err, body) => {
@@ -1466,7 +1466,7 @@ router.get('/syncHFRFacilities', (req, res) => {
                           winston.error(err);
                           errorOccured = true;
                         }
-                        if(page == null) {
+                        if(page === null) {
                           return callback(null);
                         }
                       });
@@ -1477,7 +1477,7 @@ router.get('/syncHFRFacilities', (req, res) => {
                       }
                       let tmpBundle = lodash.cloneDeep(fhirReqs)
                       fhirReqs.entry = []
-                      if(page) {
+                      if(page !== null) {
                         callback(null);
                       }
                       mcsd.saveLocations(tmpBundle, database, (err, body) => {
@@ -1485,7 +1485,7 @@ router.get('/syncHFRFacilities', (req, res) => {
                           winston.error(err);
                           errorOccured = true;
                         }
-                        if(page == null) {
+                        if(page === null) {
                           return callback(null);
                         }
                       });

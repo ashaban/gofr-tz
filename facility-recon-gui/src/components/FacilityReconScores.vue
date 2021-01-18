@@ -1367,7 +1367,7 @@ export default {
       this.source2Name = source2Name
       this.selectedSource2UUID = source2uuid
       this.mappedParentName = mappedParentName
-      if (source2Id === null) {
+      if (source2uuid === null) {
         this.alert = true
         this.alertTitle = 'Information'
         this.alertText = `Select ${this.$store.state.activePair.source2.name.toUpperCase()} Location to match against ${this.$store.state.activePair.source1.name.toUpperCase()} Location`
@@ -1468,7 +1468,7 @@ export default {
           let source2Parents = null
           let source2Code
           for (let k in this.$store.state.source2UnMatched) {
-            if (this.$store.state.source2UnMatched[k].id === this.source2Id) {
+            if (this.$store.state.source2UnMatched[k].uuid === this.selectedSource2UUID) {
               source2Parents = this.$store.state.source2UnMatched[k].parents
               source2Code = this.$store.state.source2UnMatched[k].code
               this.$store.state.source2UnMatched.splice(k, 1)

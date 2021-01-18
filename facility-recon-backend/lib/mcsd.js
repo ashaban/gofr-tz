@@ -2174,6 +2174,7 @@ module.exports = () => ({
     }
   },
   flag(source1Id, source2Id, source1DB, flagComment, callback) {
+    winston.error(source1Id + ' ===> ' + source2Id)
     winston.info('Flagging facility')
     this.getLocationByID(source1DB, source1Id, false, (location) => {
       if(location.entry.length === 0) {
