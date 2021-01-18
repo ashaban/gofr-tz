@@ -170,19 +170,26 @@ module.exports = () => ({
     const adminAreas = [];
     request.get(options, (err, res, body) => {
       if (err) {
-        return callback(err);
+        winston.error(err)
       }
-      body = JSON.parse(body);
-      const admin = body.find(bd => bd.id === 425);
-      if (!admin) {
-        return callback(true);
+      if (err || !isJSON(body)) {
+        winston.error('An error occured, retrying ...')
+        this.getAdminAreas((err, adminAreas) => {
+          return callback(err, adminAreas)
+        })
+      } else {
+        body = JSON.parse(body);
+        const admin = body.find(bd => bd.id === 425);
+        if (!admin) {
+          return callback(true);
+        }
+        const fields = admin.fields.find(field => field.id.toString() === '1629');
+        if (!fields) {
+          return callback(true);
+        }
+        extractHierarchy(fields.config.hierarchy);
+        return callback(false, adminAreas);
       }
-      const fields = admin.fields.find(field => field.id.toString() === '1629');
-      if (!fields) {
-        return callback(true);
-      }
-      extractHierarchy(fields.config.hierarchy);
-      return callback(false, adminAreas);
     });
 
     const adminAreaFlat = {};
