@@ -56,6 +56,7 @@ const getDocument = ({index, query}, callback) => {
             .segment('scroll')
             .toString()
           query = {
+            scroll: '1m',
             scroll_id: scroll_id
           }
         }

@@ -16,7 +16,6 @@ const mcsd = require('../mcsd')();
 const hfr = require('../hfr')();
 const config = require('../config');
 const fhir = require('../fhir');
-const { build } = require('urijs');
 const mixin = require('../mixin')();
 
 const topOrgId = config.getConf('mCSD:fakeOrgId');
@@ -1347,9 +1346,9 @@ router.get('/syncHFRFacilities', (req, res) => {
                     let mergedToDB = false
                     let tryMergingPromise = new Promise((resolve) => {
                       //if anything has been changed apart from the parent then merge automatically
-                      if(!hfrParentCode || hfrParentCode != fhirParentCode) {
-                        return resolve()
-                      }
+                      // if(!hfrParentCode || hfrParentCode != fhirParentCode) {
+                      //   return resolve()
+                      // }
                       let dvs = {}
                       const identifier = `http://hfrportal.ehealth.go.tz|${hfrParentCode}`;
                       const url = URI(config.getConf('mCSD:url'))

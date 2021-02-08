@@ -1792,7 +1792,8 @@ if (cluster.isMaster) {
     winston.info('Calculating Scores')
     const {
       clientId,
-      source1
+      source1,
+      disableResponse,
     } = req.query;
     let esindex1
     let source1Tenancy
@@ -2050,6 +2051,9 @@ if (cluster.isMaster) {
             source1TotalAllRecords: documents.length
           };
           winston.info('Done calculating scores')
+          if(disableResponse) {
+            return
+          }
           scoreResData = JSON.stringify({
             status: 'Done',
             error: null,

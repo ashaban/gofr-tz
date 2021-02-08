@@ -109,6 +109,10 @@ router.get('/syncVIMS', (req, res) => {
         }
       }
       let uuid = uuid5(facility.id.toString(), '7ee93e32-78da-4913-82f8-49eb0a618cfc')
+      let status = 'active'
+      if(!facility.active) {
+        status = 'inactive'
+      }
       let entry = {
         resourceType: 'Location',
         id: uuid,
@@ -123,7 +127,7 @@ router.get('/syncVIMS', (req, res) => {
             display: 'https://vims.moh.go.tz',
           }
         }],
-        active: facility.active,
+        status: status,
         partOf: {
           reference: `Location/${zone.id}`,
           display: zone.name
