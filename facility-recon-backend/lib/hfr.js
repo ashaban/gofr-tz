@@ -1,4 +1,5 @@
 require('./init');
+const utils = require('./utils');
 const winston = require('winston');
 const request = require('request');
 const URI = require('urijs');
@@ -47,7 +48,7 @@ module.exports = () => ({
     );
   },
 
-  getFacilities(page, callback) {
+  getFacilities(page, orchestrations, callback) {
     // let facilitiesdel = require('./delete.json')
     // return callback(facilitiesdel)
     // page = 0
@@ -77,7 +78,9 @@ module.exports = () => ({
           return callback(null)
         })
         function getDt(clbck) {
+          let before = new Date()
           request.get(options, (err, res, body) => {
+            orchestrations.push(utils.buildOrchestration('Getting HFR Facilities - human', before, 'GET', options.url, JSON.stringify(options.headers), res, body))
             if (isJSON(body)) {
               body = JSON.parse(body);
               if (body.hasOwnProperty('sites') && body.sites.length > 0) {
@@ -126,7 +129,9 @@ module.exports = () => ({
           return callback(null)
         })
         function getDt(clbck) {
+          let before = new Date()
           request.get(options, (err, res, body) => {
+            orchestrations.push(utils.buildOrchestration('Getting HFR Facilities - nonhuman', before, 'GET', options.url, JSON.stringify(options.headers), res, body))
             if (isJSON(body)) {
               body = JSON.parse(body);
               if (body.hasOwnProperty('sites') && body.sites.length > 0) {
@@ -154,7 +159,7 @@ module.exports = () => ({
     })
   },
 
-  getAdminAreas(callback) {
+  getAdminAreas(orchestrations, callback) {
     winston.info('Getting Administrative areas from HFR');
     const url = new URI(config.getConf('hfr:baseURL')).segment('/api/collections/409/fields.json');
     const username = config.getConf('hfr:username');
@@ -168,13 +173,15 @@ module.exports = () => ({
       },
     };
     const adminAreas = [];
+    let before = new Date()
     request.get(options, (err, res, body) => {
+      orchestrations.push(utils.buildOrchestration('Getting Administrative Areas', before, 'GET', options.url, JSON.stringify(options.headers), res, body))
       if (err) {
         winston.error(err)
       }
       if (err || !isJSON(body)) {
         winston.error('An error occured, retrying ...')
-        this.getAdminAreas((err, adminAreas) => {
+        this.getAdminAreas(orchestrations, (err, adminAreas) => {
           return callback(err, adminAreas)
         })
       } else {

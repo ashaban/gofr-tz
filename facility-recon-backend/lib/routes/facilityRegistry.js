@@ -2,8 +2,10 @@
 /* eslint-disable no-param-reassign */
 /* eslint-disable consistent-return */
 require('../init');
+const medUtils = require('openhim-mediator-utils');
 const winston = require('winston');
 const express = require('express');
+const request = require('request');
 const formidable = require('formidable');
 const URI = require('urijs');
 const async = require('async');
@@ -19,6 +21,57 @@ const fhir = require('../fhir');
 const mixin = require('../mixin')();
 
 const topOrgId = config.getConf('mCSD:fakeOrgId');
+const apiConf = config.getConf('mediator');
+
+function updateTransaction(
+  req,
+  body,
+  statatusText,
+  statusCode,
+  orchestrations
+) {
+  const transactionId = req.headers['x-openhim-transactionid'];
+  var update = {
+    'x-mediator-urn': mediatorConfig.urn,
+    status: statatusText,
+    response: {
+      status: statusCode,
+      timestamp: new Date(),
+      body: body,
+    },
+    orchestrations: orchestrations,
+  };
+  medUtils.authenticate(apiConf.api, function (err) {
+    if (err) {
+      return winston.error(err.stack);
+    }
+    var headers = medUtils.genAuthHeaders(apiConf.api);
+    var options = {
+      url: apiConf.api.apiURL + '/transactions/' + transactionId,
+      headers: headers,
+      json: update,
+    };
+
+    request.put(options, function (err, apiRes, body) {
+      if (err) {
+        return winston.error(err);
+      }
+      if (apiRes.statusCode !== 200) {
+        return winston.error(
+          new Error(
+            'Unable to save updated transaction to OpenHIM-core, received status code ' +
+            apiRes.statusCode +
+            ' with body ' +
+            body
+          ).stackupdateTransaction
+        );
+      }
+      winston.info(
+        'Successfully updated transaction with id ' + transactionId
+      );
+    });
+  });
+}
 
 router.post('/addService', (req, res) => {
   winston.info('Received a request to add a new service');
@@ -1164,13 +1217,18 @@ router.get('/getTree', (req, res) => {
 });
 
 router.get('/syncHFRFacilities', (req, res) => {
+  if(req.headers['x-openhim-transactionid']) {
+    res.end();
+    updateTransaction(req, 'Still Processing', 'Processing', '200', '');
+  }
+  let orchestrations = [];
   let errorOccured = false;
   const database = config.getConf('updaterequests:tenancyid');
   const productionDB = config.getConf('hfr:tenancyid');
   winston.info('Getting facilities from HFR');
   let HFRMetadata = [];
   let facTypes;
-  hfr.getMetaData((metadata) => {
+  hfr.getMetaData(orchestrations, (metadata) => {
     HFRMetadata = metadata;
     const classification = HFRMetadata.find(field => parseInt(field.id) === 424);
     if (classification) {
@@ -1187,7 +1245,7 @@ router.get('/syncHFRFacilities', (req, res) => {
     fhirReqs.entry = [];
     async.doWhilst(
       (callback) => {
-        hfr.getFacilities(page, (facilities) => {
+        hfr.getFacilities(page, orchestrations, (facilities) => {
           page = facilities.nextPage
           async.eachSeries(facilities.human, (facility, nxtFacility) => {
             facility.name = facility.name.trim()
@@ -1535,9 +1593,18 @@ router.get('/syncHFRFacilities', (req, res) => {
           }, () => {
             winston.info('HFR Sync is done');
             if (errorOccured) {
-              return res.status(500).send();
+              if(req.headers['x-openhim-transactionid']) {
+                res.end();
+                updateTransaction(req, '', 'Successful', '500', orchestrations);
+              } else {
+                return res.status(500).send();
+              }
             }
-            return res.status(200).send();
+            if(req.headers['x-openhim-transactionid']) {
+              updateTransaction(req, '', 'Successful', '200', orchestrations);
+            } else {
+              return res.status(200).send();
+            }
           })
         } else {
           winston.info('HFR Sync is done');
@@ -1693,11 +1760,16 @@ router.get('/syncHFRFacilities', (req, res) => {
 });
 
 router.get('/syncHFRAdminAreas', (req, res) => {
+  if(req.headers['x-openhim-transactionid']) {
+    res.end();
+    updateTransaction(req, 'Still Processing', 'Processing', '200', '');
+  }
+  let orchestrations = [];
   let errorOccured = false;
   const database = config.getConf('updaterequests:tenancyid');
   const productionDB = config.getConf('hfr:tenancyid');
   winston.info('Getting facilities from HFR');
-  hfr.getAdminAreas((err, adminAreas) => {
+  hfr.getAdminAreas(orchestrations, (err, adminAreas) => {
     if (err) {
       errorOccured = true;
       return res.status(500).send();
@@ -1920,16 +1992,34 @@ router.get('/syncHFRAdminAreas', (req, res) => {
         }, () => {
           winston.info('HFR Admin Area Sync is done');
           if (errorOccured) {
-            return res.status(500).send();
+            if(req.headers['x-openhim-transactionid']) {
+              res.end();
+              updateTransaction(req, '', 'Successful', '500', orchestrations);
+            } else {
+              return res.status(500).send();
+            }
           }
-          return res.status(200).send();
+          if(req.headers['x-openhim-transactionid']) {
+            updateTransaction(req, '', 'Successful', '200', orchestrations);
+          } else {
+            return res.status(200).send();
+          }
         })
       } else {
         winston.info('HFR Admin Area Sync is done');
         if (errorOccured) {
-          return res.status(500).send();
+          if(req.headers['x-openhim-transactionid']) {
+            res.end();
+            updateTransaction(req, '', 'Successful', '500', orchestrations);
+          } else {
+            return res.status(500).send();
+          }
         }
-        return res.status(200).send();
+        if(req.headers['x-openhim-transactionid']) {
+          updateTransaction(req, '', 'Successful', '200', orchestrations);
+        } else {
+          return res.status(200).send();
+        }
       }
     });
 

@@ -3455,7 +3455,7 @@ if (cluster.isMaster) {
   });
 
   app.get('/getDataPairs/:userID', (req, res) => {
-    winston.info('received request to get data sources');
+    winston.info('received request to get data source pairs');
     mongo.getDataPairs(req.params.userID, (err, pairs) => {
       if (err) {
         res.status(500).json({

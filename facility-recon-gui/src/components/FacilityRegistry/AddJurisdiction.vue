@@ -170,7 +170,6 @@ export default {
       if (this.activeJurisdiction.id) {
         formData.append('parent', this.activeJurisdiction.id)
       }
-      console.log(this.activeJurisdiction)
       if (this.activeJurisdiction && this.activeJurisdiction.data && this.activeJurisdiction.data.level) {
         formData.append('level', this.activeJurisdiction.data.level)
       } else {
