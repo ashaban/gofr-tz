@@ -8,12 +8,12 @@ const isJSON = require('is-json');
 const config = require('./config');
 
 module.exports = () => ({
-  getMetaData(callback) {
+  getMetaData(orchestrations, callback) {
     let metadata = [];
     let nexturl = new URI(config.getConf('hfr:baseURL')).segment('/api/collections/409/fields.json').addQuery('human', 'true');
     const username = config.getConf('hfr:username');
     const password = config.getConf('hfr:password');
-    const auth = `Basic ${new Buffer(`${username}:${password}`).toString('base64')}`;
+    const auth = `Basic ${new Buffer.from(`${username}:${password}`).toString('base64')}`;
     async.doWhilst(
       (callback) => {
         const options = {
@@ -22,7 +22,9 @@ module.exports = () => ({
             Authorization: auth,
           },
         };
+        let before = new Date()
         request.get(options, (err, res, body) => {
+          orchestrations.push(utils.buildOrchestration('Getting Metadata', before, 'GET', options.url, JSON.stringify(options.headers), res, body))
           if (isJSON(body)) {
             body = JSON.parse(body);
             metadata = metadata.concat(body);
